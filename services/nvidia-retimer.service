@@ -1,0 +1,12 @@
+[Unit]
+Description=NVIDIA Retimer monitor
+#TDB add After Clause
+[Service]
+Restart=always
+Type=dbus
+ExecStart=/usr/bin/env nvidia-rt-monitor
+SyslogIdentifier=nvidia-rt-monitor
+BusName=com.Nvidia.Rt
+
+[Install]
+WantedBy=multi-user.target
