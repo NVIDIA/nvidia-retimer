@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
         printf("AriesPTX16\n");
     }
     else if (strcmp(argv[1], "version") == 0) {
-        printf("FW Version: %d.%d.%d\n", ariesDevice->fwVersion.major,
+        printf("%d.%d.%d\n", ariesDevice->fwVersion.major,
         ariesDevice->fwVersion.minor, ariesDevice->fwVersion.build);
     }
 

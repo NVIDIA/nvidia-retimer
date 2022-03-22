@@ -90,7 +90,7 @@ inline void stripUnicode(std::string& str)
 class Util
 {
   protected:
-    uint8_t b, d;
+    int b, d;
 
   public:
     virtual ~Util() = default;
