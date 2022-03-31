@@ -922,6 +922,11 @@ AriesErrorType ariesLoadIhxFile(
         char* filename,
         uint8_t* mem);
 
+/* this loads a bin file into the mem[] array */
+AriesErrorType ariesLoadBinFile(
+        char* filename,
+        uint8_t* mem);
+
 /* this is used by loadFile to get each line of intex hex */
 AriesErrorType ariesParseIhxLine(
         char *theline,
