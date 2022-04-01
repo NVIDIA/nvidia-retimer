@@ -3060,6 +3060,41 @@ uint16_t ariesGetMedian(
     return arr[ind];
 }
 
+/* loads a bin file into the global memory[] array */
+/* filename is a string of the file to be opened */
+AriesErrorType ariesLoadBinFile(
+        char* filename,
+        uint8_t* mem)
+{
+    FILE *fin;
+    int r;
+
+    // Check if file is valid
+    if (strlen(filename) == 0)
+    {
+        ASTERA_ERROR("Can't load a file without the filename");
+        return ARIES_INVALID_ARGUMENT;
+    }
+    fin = fopen(filename, "r");
+    if (fin == NULL)
+    {
+        ASTERA_ERROR("Can't open file '%s' for reading", filename);
+        return ARIES_FAILURE;
+    }
+
+    r = fread(mem, 1, ARIES_EEPROM_NUM_BYTES, fin);
+
+    ASTERA_INFO("Read %d bytes from binary file", r);
+
+    fclose(fin);
+
+    if (r != ARIES_EEPROM_NUM_BYTES) {
+        ASTERA_ERROR("Expected %d bytes from binary file", ARIES_EEPROM_NUM_BYTES);
+        return ARIES_FAILURE;
+    }
+    return ARIES_SUCCESS;
+}
+
 
 /* loads an intel hex file into the global memory[] array */
 /* filename is a string of the file to be opened */
@@ -3115,6 +3150,7 @@ AriesErrorType ariesLoadIhxFile(
         if (rc != ARIES_SUCCESS)
         {
             ASTERA_ERROR("Error: '%s', line: %d", filename, lineno);
+            break;
         }
         else
         {

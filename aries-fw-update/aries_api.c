@@ -408,7 +408,11 @@ AriesErrorType ariesUpdateFirmware(
     rc = ariesLoadIhxFile(filename, image);
     if (rc != ARIES_SUCCESS)
     {
-        ASTERA_ERROR("Failed to load the .ihx file. RC = %d", rc);
+        ASTERA_INFO("Failed to load the .ihx file. RC = %d, using binary format", rc);
+        rc = ariesLoadBinFile(filename, image);
+        if (rc != ARIES_SUCCESS) {
+            ASTERA_ERROR("Failed to load the bin file. RC = %d", rc);
+        }
     }
 
     // Enable legacy mode if ARP is enabled or not running valid FW
