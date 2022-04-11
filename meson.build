@@ -26,6 +26,7 @@ fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
 
+subdir('concurrent-update')
 subdir('inventory')
 subdir('services')
 subdir('aries-fw-update')
