@@ -66,6 +66,8 @@ class Retimer : public RtInherit, public Util
                                              "Item.Chassis.ChassisType.Module");
         sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis::type(
             chassisType);
+
+        emit_object_added();
     }
 
     const std::string& getInventoryPath() const
