@@ -30,3 +30,5 @@ subdir('concurrent-update')
 subdir('inventory')
 subdir('services')
 subdir('aries-fw-update')
+subdir('test')
+
