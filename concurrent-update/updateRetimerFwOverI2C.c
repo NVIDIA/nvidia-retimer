@@ -295,7 +295,7 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 		return -ERROR_OPEN_FIRMWARE;
 	}
 
-	close(fw_fd);
+	//close(fw_fd);
 
 	// calculate CRC32
 	fw_crc32 = crc32(fw_buf, st.st_size);
@@ -346,7 +346,7 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	write_buffer[6] = ((st.st_size & BYTE3) >> 24);
 
 	for (int index = 3; index < 7; index++) {
-		fprintf(stdout, "#6 Retimer %d 0x%lx write_buffer: 0x%x\n",
+		debug_print("# Retimer %d 0x%lx write_buffer: 0x%x\n",
 			index, (long int)st.st_size, write_buffer[index]);
 	}
 
@@ -412,8 +412,8 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	write_buffer[1] = ((FPGA_CHKSUM_REG & BYTE1) >> 8); //0x00;
 	write_buffer[2] = ((FPGA_CHKSUM_REG & BYTE0) >> 0); //0x04;
 
-	ret = send_i2c_cmd(fd, FPGA_READ, slaveId, write_buffer, read_buffer, 3,
-			   4);
+	ret = send_i2c_cmd(fd, FPGA_READ, slaveId, write_buffer, read_buffer, W_BYTE_COUNT,
+			   R_BYTE_COUNT);
 	if (ret) {
 		fprintf(stderr,
 			"FW update FPGA_READ failed write_buffer: 0x%x 0x%x 0x%x\n",
@@ -462,7 +462,7 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 		return -ERROR_WRONG_FIRMWARE;
 	}
 
-    fw_buf = (unsigned char *)malloc(st.st_size);
+	fw_buf = (unsigned char *)malloc(st.st_size);
 
 	if (fw_buf == NULL) {
 		return -ERROR_MALLOC_FAILURE;
@@ -480,7 +480,7 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 		memcpy(&write_buffer[3], fw_buf + (i * BYTE_PER_PAGE),
 		       BYTE_PER_PAGE);
 		ret = send_i2c_cmd(fd, FPGA_READ, slaveId, write_buffer,
-				   read_buffer, 3,BYTE_PER_PAGE);
+				   read_buffer, W_BYTE_COUNT, BYTE_PER_PAGE);
 		if (ret) {
 			fprintf(stderr,
 				"FW update FPGA_WRITE failed write_buffer: 0x%x 0x%x 0x%x\n",
@@ -490,9 +490,11 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 			return ret;
 		}
 
-        memcpy(fw_buf + (i * BYTE_PER_PAGE),&read_buffer[0],BYTE_PER_PAGE);
+		memcpy(fw_buf + (i * BYTE_PER_PAGE), &read_buffer[0],
+		       BYTE_PER_PAGE);
 	}
-	fprintf(stdout, "Image copy from FPGA completed 0x%x \n", read_buffer[0]);
+	fprintf(stdout, "Image copy from FPGA completed 0x%x \n",
+		read_buffer[0]);
 	ret = write(fw_fd, fw_buf, st.st_size);
 	if (ret < 0) {
 		fprintf(stderr, "ret:%d  unable to read FW file error %s \n",
@@ -504,10 +506,9 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	close(fw_fd);
 
 	free(fw_buf);
-    return 0;
-
+	return 0;
 }
-	//payload -> 
+//payload ->
 /*******************************************************************************
  * checkWriteNackError()
  *
@@ -656,7 +657,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 		// Trigger update, writing 3 bytes address followed by 4 bytes 4 bytes 4 bytes 4 bytes value in FPGA Update control register to trigger update for retimerNumber and reading back
 		// value from 0x04_0008 AKA FPGA_Control and udpate status register
 		ret = send_i2c_cmd(fd, FPGA_WRITE, FPGA_I2C_CNTRL_ADDR,
-				   write_buffer, read_buffer, 7, 4);
+				   write_buffer, read_buffer, W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
 		if (ret) {
 			fprintf(stderr,
 				"Retimer Fw Update failed!!,send_i2c_cmd command failed with  %d errno %s ...\n",
@@ -689,7 +690,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 				((FPGA_UPDATE_STATUS_REG & BYTE0) >> 0); //0x08;
 
 			ret = send_i2c_cmd(fd, FPGA_READ, FPGA_I2C_CNTRL_ADDR,
-					   write_buffer, read_buffer, 3, 4);
+					   write_buffer, read_buffer, W_BYTE_COUNT, R_BYTE_COUNT);
 			if (ret) {
 				fprintf(stderr,
 					"Retimer FW update failed!!,send_i2c_cmd command failed with  %d errno %s ...\n",
@@ -783,7 +784,7 @@ int readRetimerfw(int fd, uint8_t retimerNumber)
 
 		// trigger retimer read
 		ret = send_i2c_cmd(fd, FPGA_WRITE, FPGA_I2C_CNTRL_ADDR,
-				   write_buffer, read_buffer, 7, 4);
+				   write_buffer, read_buffer, W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
 		if (ret) {
 			fprintf(stderr,
 				"Retimer FW Read : failed!, send_i2c_cmd not completed for retimer %d...errno %s\n",
@@ -821,7 +822,7 @@ int readRetimerfw(int fd, uint8_t retimerNumber)
 				((FPGA_READ_STATUS_REG & BYTE0) >> 0); //0x0C;
 
 			ret = send_i2c_cmd(fd, FPGA_READ, FPGA_I2C_CNTRL_ADDR,
-					   write_buffer, read_buffer, 3, 4);
+					   write_buffer, read_buffer, W_BYTE_COUNT, R_BYTE_COUNT);
 			if (ret) {
 				fprintf(stderr,
 					"Retimer FW Read : failed!, send_i2c_cmd not completed for retimer %d...errno %s\n",

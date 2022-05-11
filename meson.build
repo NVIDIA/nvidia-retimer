@@ -20,6 +20,9 @@ cdata.set_quoted(
 cdata.set_quoted(
     'BASE_INV_PATH', '/xyz/openbmc_project/inventory/system/board')
 
+cdata.set('FPGA_I2C_CNTRL_ADDR',get_option('fpga_i2c_cntrl_addr'))
+cdata.set('MAX_FW_IMAGE_SIZE',get_option('fw_image_size'))
+
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')
 fmt = dependency('fmt')

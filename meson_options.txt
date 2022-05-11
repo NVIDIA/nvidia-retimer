@@ -1,2 +1,21 @@
-option('tests', type: 'feature', value: 'enabled', description: 'Build tests.',)
-option('concurrent-update', type: 'feature', value: 'enabled', description: 'concurrent FW update',)
+option('tests', 
+		type: 'feature', 
+		value: 'enabled', 
+		description: 'Build tests.',)
+option('concurrent-update', 
+		type: 'feature', 
+		value: 'enabled', 
+		description: 'concurrent FW update',)
+option('fpga_i2c_cntrl_addr',
+       type: 'integer',
+       min: 0x0,
+       max:0xFF,
+       description: 'FPGA I2C Controller address',
+       value: 0x62,)
+option('fw_image_size',
+       type: 'integer',
+       min: 0x100,
+       max: 0x40000,
+       description: 'Maximum supported FW image size',
+       value: 0x40000,)
+

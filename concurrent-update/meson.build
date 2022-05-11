@@ -1,10 +1,3 @@
-configure_file(output: 'config.h',
-            configuration: cdata, 
-)
-
-add_project_arguments('-DFPGA_I2C_CNTRL_ADDR=0x62', language : 'c')
-add_project_arguments('-DMAX_FW_IMAGE_SIZE=(256*1024)', language : 'c')
-
 retimer_inc = include_directories('.')
 
 source_files = [
@@ -14,6 +7,10 @@ source_files = [
 lib_source_files = [
 	'updateRetimerFwOverI2C.cpp'
 ]
+
+configure_file(output: 'config.h',
+            configuration: cdata, 
+)
 
 retimer_headers = include_directories('.')
 

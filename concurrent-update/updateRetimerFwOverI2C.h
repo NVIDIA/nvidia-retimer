@@ -10,11 +10,12 @@
 
 #pragma once
 
+#include "config.h"
+
 #define UPDATE_STATUS 0x0F
 #define FPGA_READ 0x1
 #define FPGA_WRITE 0x0
 #define RETIMER_MAX_NUM 8
-//#define FPGA_I2C_CNTRL_ADDR 0x62
 #define RETIMER_EEPROM_WRITE 0
 #define RETIMER_EEPROM_READ 1
 #define BYTE_PER_PAGE 256
@@ -33,7 +34,6 @@
 #define GPU_BASE1_PRSNT_N_MASK 0x1
 #define GPU_BASE1_CPLD_READY_MASK 0x4
 
-//#define MAX_FW_IMAGE_SIZE (256 * 1024)
 // WRITE_BUF_SIZE consist of WRITE_ADDRESS+FW_IMAGE_SIZE
 #define WRITE_BUF_SIZE (MAX_FW_IMAGE_SIZE + 4)
 #define READ_BUF_SIZE 4
@@ -59,6 +59,12 @@
 #define FW_READ_STATUS_MASK 0x1
 #define FW_READ_NACK_MASK 0x1
 #define SET_RETIMER_FW_READ 0x1
+
+// READ and WRITE BYTE Count 
+#define W_BYTE_COUNT_WITHPAYLOAD 7
+#define W_BYTE_COUNT 3 
+#define R_BYTE_COUNT 4
+
 
 // CPLD related MACRO
 #define CPLD_I2C_BUS 2
@@ -156,7 +162,8 @@ int checkDigit_retimer(char *str);
 int parseStr(const char *in, int startid, int endid, char *op);
 int readFwVersion(char *str, char **ver);
 int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId);
-int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId);
+int copyImageFromFpga(unsigned int fw_fd, unsigned int fd,
+		      unsigned int slaveId);
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
