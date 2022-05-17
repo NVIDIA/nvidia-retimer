@@ -33,5 +33,7 @@ subdir('concurrent-update')
 subdir('inventory')
 subdir('services')
 subdir('aries-fw-update')
-subdir('test')
 
+if get_option('tests').enabled()
+  subdir('test')
+endif
