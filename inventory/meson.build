@@ -11,5 +11,5 @@ executable('nvidia-rt-monitor', 'main.cpp', 'rt_manager.cpp',
                               phosphor_dbus_interfaces,
                               fmt,
                             ],
-               install : true,
+               install : get_option('install_retimer_inventory'),
                install_dir : get_option('bindir'))

@@ -18,4 +18,12 @@ option('fw_image_size',
        max: 0x40000,
        description: 'Maximum supported FW image size',
        value: 0x40000,)
+option('install_retimer_inventory',
+       type: 'boolean',
+       description: 'Install Nvidia retimer inventory monitor service.',
+       value: false)
+option('install_aries_tools',
+       type: 'boolean',
+       description: 'Install aries tools aries-test, aries-info and aries-update.',
+       value: false)
 
