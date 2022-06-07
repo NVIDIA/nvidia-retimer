@@ -22,11 +22,20 @@
 #include <systemd/sd-bus.h>
 #include "updateRetimerFwOverI2C.h"
 
+char *versionStr = NULL;
 const uint8_t mask_retimer[] = { RETIMER0, RETIMER1, RETIMER2,
 				 RETIMER3, RETIMER4, RETIMER5,
 				 RETIMER6, RETIMER7, RETIMERALL };
 
 uint8_t verbosity = 0;
+
+char *arrRetimer[] = { "PCIeRetimer0Firmware", "PCIeRetimer1Firmware",
+		       "PCIeRetimer2Firmware", "PCIeRetimer3Firmware",
+		       "PCIeRetimer4Firmware", "PCIeRetimer5Firmware",
+		       "PCIeRetimer6Firmware", "PCIeRetimer7Firmware",
+		       };
+
+uint8_t retimerNum = INIT_UINT8;
 
 void debug_print(char *fmt, ...)
 {
@@ -35,6 +44,38 @@ void debug_print(char *fmt, ...)
 		va_start(args, fmt);
 		vfprintf(stderr, fmt, args);
 		va_end(args);
+	}
+}
+
+/***********************************************************************
+ * 
+ * prepareMessageRegistry()
+ * 
+ * Wrappper on top of emitLogMessage.
+ * Message registry is updated based on passed Retimer,successfully updated retimer and failed Retimer
+ *
+ * RETURN: void 
+ **********************************************************************/
+void prepareMessageRegistry(uint8_t retimer, char *message,
+			    bool VerBeforeDevice, char *severity,
+			    char *resolution)
+{
+	if (retimer) {
+		for (uint8_t index = 0; index < 8; index++) {
+			if (retimer & 1) {
+				if (VerBeforeDevice) {
+					emitLogMessage(message, versionStr,
+						       arrRetimer[index],
+						       severity, resolution);
+				} else {
+					emitLogMessage(message,
+						       arrRetimer[index],
+						       versionStr, severity,
+						       resolution);
+				}
+			}
+			retimer = retimer >> 1;
+		}
 	}
 }
 
@@ -346,8 +387,8 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	write_buffer[6] = ((st.st_size & BYTE3) >> 24);
 
 	for (int index = 3; index < 7; index++) {
-		debug_print("# Retimer %d 0x%lx write_buffer: 0x%x\n",
-			index, (long int)st.st_size, write_buffer[index]);
+		debug_print("# Retimer %d 0x%lx write_buffer: 0x%x\n", index,
+			    (long int)st.st_size, write_buffer[index]);
 	}
 
 	ret = send_i2c_cmd(fd, FPGA_WRITE, slaveId, write_buffer, 0, 7, 0);
@@ -412,8 +453,8 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	write_buffer[1] = ((FPGA_CHKSUM_REG & BYTE1) >> 8); //0x00;
 	write_buffer[2] = ((FPGA_CHKSUM_REG & BYTE0) >> 0); //0x04;
 
-	ret = send_i2c_cmd(fd, FPGA_READ, slaveId, write_buffer, read_buffer, W_BYTE_COUNT,
-			   R_BYTE_COUNT);
+	ret = send_i2c_cmd(fd, FPGA_READ, slaveId, write_buffer, read_buffer,
+			   W_BYTE_COUNT, R_BYTE_COUNT);
 	if (ret) {
 		fprintf(stderr,
 			"FW update FPGA_READ failed write_buffer: 0x%x 0x%x 0x%x\n",
@@ -634,7 +675,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 	int ret = 0;
 
 	// 8. Trigger update to 0x04_0008
-	fprintf(stdout, "Trigger FW update...\n");
+	fprintf(stdout, "Trigger FW update...retimerNumber %d \n",
+		retimerNumber);
 	// Trigger FW update
 	for (uint8_t updateRetryCount = 0;
 	     updateRetryCount < MAX_UPDATE_RETRYCOUNT; updateRetryCount++) {
@@ -657,7 +699,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 		// Trigger update, writing 3 bytes address followed by 4 bytes 4 bytes 4 bytes 4 bytes value in FPGA Update control register to trigger update for retimerNumber and reading back
 		// value from 0x04_0008 AKA FPGA_Control and udpate status register
 		ret = send_i2c_cmd(fd, FPGA_WRITE, FPGA_I2C_CNTRL_ADDR,
-				   write_buffer, read_buffer, W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
+				   write_buffer, read_buffer,
+				   W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
 		if (ret) {
 			fprintf(stderr,
 				"Retimer Fw Update failed!!,send_i2c_cmd command failed with  %d errno %s ...\n",
@@ -690,7 +733,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 				((FPGA_UPDATE_STATUS_REG & BYTE0) >> 0); //0x08;
 
 			ret = send_i2c_cmd(fd, FPGA_READ, FPGA_I2C_CNTRL_ADDR,
-					   write_buffer, read_buffer, W_BYTE_COUNT, R_BYTE_COUNT);
+					   write_buffer, read_buffer,
+					   W_BYTE_COUNT, R_BYTE_COUNT);
 			if (ret) {
 				fprintf(stderr,
 					"Retimer FW update failed!!,send_i2c_cmd command failed with  %d errno %s ...\n",
@@ -720,16 +764,34 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 				ret = checkWriteNackError(status_writeNack,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
+				prepareMessageRegistry(
+					retryUpdate4Retimer,
+					"VerificationFailed",
+					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					NULL);
 			}
 			if (status_readNack) {
 				ret |= checkReadNackError(status_readNack,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
+				prepareMessageRegistry(
+					retryUpdate4Retimer,
+					"VerificationFailed",
+					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					NULL);
 			}
 			if (status_checksum) {
 				ret |= checkChecksumError(status_checksum,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
+				prepareMessageRegistry(
+					retryUpdate4Retimer,
+					"VerificationFailed",
+					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					NULL);
 			}
 			retimerNumber = retryUpdate4Retimer;
 			fprintf(stderr,
@@ -784,7 +846,8 @@ int readRetimerfw(int fd, uint8_t retimerNumber)
 
 		// trigger retimer read
 		ret = send_i2c_cmd(fd, FPGA_WRITE, FPGA_I2C_CNTRL_ADDR,
-				   write_buffer, read_buffer, W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
+				   write_buffer, read_buffer,
+				   W_BYTE_COUNT_WITHPAYLOAD, R_BYTE_COUNT);
 		if (ret) {
 			fprintf(stderr,
 				"Retimer FW Read : failed!, send_i2c_cmd not completed for retimer %d...errno %s\n",
@@ -822,7 +885,8 @@ int readRetimerfw(int fd, uint8_t retimerNumber)
 				((FPGA_READ_STATUS_REG & BYTE0) >> 0); //0x0C;
 
 			ret = send_i2c_cmd(fd, FPGA_READ, FPGA_I2C_CNTRL_ADDR,
-					   write_buffer, read_buffer, W_BYTE_COUNT, R_BYTE_COUNT);
+					   write_buffer, read_buffer,
+					   W_BYTE_COUNT, R_BYTE_COUNT);
 			if (ret) {
 				fprintf(stderr,
 					"Retimer FW Read : failed!, send_i2c_cmd not completed for retimer %d...errno %s\n",

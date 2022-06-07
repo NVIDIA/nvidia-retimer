@@ -5,7 +5,8 @@ source_files = [
 ]
 
 lib_source_files = [
-	'updateRetimerFwOverI2C.cpp'
+	'updateRetimerFwOverI2C.cpp',
+	'dbus_log_event.c'
 ]
 
 configure_file(output: 'config.h',
@@ -18,7 +19,7 @@ retimer_deps = [
   meson.get_compiler('cpp').find_library('dl'),
 ]
 
-runtime_sources = ['updateRetimerFwOverI2C.c', 'updateRetimerFwOverI2C.h']
+runtime_sources = ['updateRetimerFwOverI2C.c', 'updateRetimerFwOverI2C.h','updateRetimerFw_dbus_log_event.c','updateRetimerFw_dbus_log_event.h']
 
 retimer_lib = static_library(
  'updateRetimerFwruntime',

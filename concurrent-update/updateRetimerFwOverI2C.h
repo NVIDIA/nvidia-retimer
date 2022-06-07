@@ -11,6 +11,9 @@
 #pragma once
 
 #include "config.h"
+#include "updateRetimerFw_dbus_log_event.h"
+#include <stddef.h>
+#include <stdbool.h>
 
 #define UPDATE_STATUS 0x0F
 #define FPGA_READ 0x1
@@ -60,11 +63,10 @@
 #define FW_READ_NACK_MASK 0x1
 #define SET_RETIMER_FW_READ 0x1
 
-// READ and WRITE BYTE Count 
+// READ and WRITE BYTE Count
 #define W_BYTE_COUNT_WITHPAYLOAD 7
-#define W_BYTE_COUNT 3 
+#define W_BYTE_COUNT 3
 #define R_BYTE_COUNT 4
-
 
 // CPLD related MACRO
 #define CPLD_I2C_BUS 2
@@ -73,6 +75,11 @@
 
 #define VERSION_LEN 10
 #define INVALID -1
+
+// Default Version
+#define DEFAULT_VERSION "Unknown"
+#define MSG_REG_DEV_FOLLOWED_BY_VER 0
+#define MSG_REG_VER_FOLLOWED_BY_DEV 1
 
 // ERROR DEFINITION
 enum { ERROR_INPUT_ARGUMENTS = 100,
@@ -147,11 +154,10 @@ typedef enum command {
 	RETIMER_FW_READ = 0x1, /**< To read Retimer FW */
 } RetimerFWCommand;
 
-/***********************************************
- * @brief 
- * to enable debug print verbosity flag used
- ***********************************************/
-
+void debug_print(char *fmt, ...);
+void prepareMessageRegistry(uint8_t retimer, char *message,
+			    bool verBeforeDevice, char *severity,
+			    char *resolution);
 unsigned int crc32(const unsigned char *buf, int length);
 int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 		 unsigned char *write_data, unsigned char *read_data,

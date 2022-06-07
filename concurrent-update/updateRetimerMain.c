@@ -25,7 +25,9 @@
 
 extern uint8_t verbosity;
 extern const uint8_t mask_retimer[];
-
+extern char *versionStr;
+extern char *arrRetimer[];
+extern uint8_t retimerNum;
 /************************************************
  * show_usage()
  *
@@ -38,21 +40,23 @@ extern const uint8_t mask_retimer[];
  ***********************************************/
 void show_usage(char *exec)
 {
-	printf("\nUsage: %s <i2c bus number> <retimer number> <firmware filename> <update/read> <verbosity>\n",
+	printf("\nUsage: %s <i2c bus number> <retimer number> <firmware filename> <update/read> <versionStr> <verbosity>\n",
 	       exec);
 	printf("        i2c bus number	: must be digits [3-12]\n");
 	printf("        retimer number		: must be digits [0-7]\n");
 	printf("        update/read/write	: 0=Update, 1=Read \n");
+	printf("        versionStr(optional): versionStr for message registry \n");
 	printf("        verbosity(debug)	: 1=enabled, 0=disable \n");
 	printf("        EX: %s 12 8 <FW_image>.bin 0 <1>\n\n", exec);
 }
 
 /******************************************************************************
-* Usage:  updateRetimerFw  <i2c bus number>  <retimer number> <firmware filename> <update/read>
-* i2c bus number  : must be digits [1-12]
+* Usage:  updateRetimerFw  <i2c bus number>  <retimer number> <firmware filename> <update/read> <VersionStr> <verbosity>
+* i2c bus number          : must be digits [3-12]
 * retimer number          : must be digits [0-7], 8 for all retimers update
 * update/read/write       : 0=Update, 1=Read
-*
+* versionStr(optional)    : versionStr for message registry
+* verbosity(debug)        : 1=enabled, 0=disable 
 *******************************************************************************/
 
 int main(int argc, char *argv[])
@@ -85,6 +89,7 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
+	retimerNum = atoi(argv[2]);
 	retimerToUpdate = mask_retimer[atoi(argv[2])];
 	retimerToRead = atoi(argv[2]);
 
@@ -93,9 +98,18 @@ int main(int argc, char *argv[])
 
 	command = atoi(argv[4]);
 
+	// FW Version
+	if (argc > 5) {
+		versionStr = argv[5];
+		fprintf(stdout, "[DEBUG]%s, %d %s\n", __func__, __LINE__,
+			argv[5]);
+	} else {
+		versionStr = DEFAULT_VERSION;
+	}
+
 	// Enable verbose mode
-	if (argc == 6) {
-		verbosity = atoi(argv[5]);
+	if (argc == 7) {
+		verbosity = atoi(argv[6]);
 		fprintf(stdout, "[DEBUG]%s, %d %d\n", __func__, __LINE__,
 			verbosity);
 	}
@@ -116,7 +130,16 @@ int main(int argc, char *argv[])
 
 		// Load FW image, calcualte checkSum and update FW image size
 		fprintf(stdout, "Start FW update procedure...\n");
-		fprintf(stdout, "Read FW Image...%s \n", imageFilename);
+		fprintf(stdout, "Read FW Image...%s Verion %s \n",
+			imageFilename, versionStr);
+		fprintf(stdout, "Retimer under update ...%s %d \n",
+			arrRetimer[retimerNum], retimerNum);
+
+		prepareMessageRegistry(
+			retimerToUpdate, "TargetDetermined",
+			MSG_REG_DEV_FOLLOWED_BY_VER,
+			"xyz.openbmc_project.Logging.Entry.Level.Informational",
+			NULL);
 
 		imagefd = open(imageFilename, O_RDONLY);
 
@@ -124,22 +147,55 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error opening file: %s\n",
 				strerror(errno));
 			close(imagefd);
+			prepareMessageRegistry(
+				retimerToUpdate, "VerificationFailed",
+				MSG_REG_DEV_FOLLOWED_BY_VER,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 		}
+		prepareMessageRegistry(
+			retimerToUpdate, "TransferringToComponent",
+			MSG_REG_VER_FOLLOWED_BY_DEV,
+			"xyz.openbmc_project.Logging.Entry.Level.Informational",
+			NULL);
+
 		ret = copyImageToFpga(imagefd, fd, FPGA_I2C_CNTRL_ADDR);
 		if (ret) {
 			fprintf(stderr,
 				"FW Update FW image copy to FPGA failed  error code%d!!!",
 				ret);
+			prepareMessageRegistry(
+				retimerToUpdate, "TransferFailed",
+				MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 			goto exit;
 		}
+
 		// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
 		ret = startRetimerFwUpdate(fd, retimerToUpdate);
 		if (ret) {
 			fprintf(stderr,
 				"FW Update for Retimer failed for retimer with error code%d!!!",
 				ret);
+			prepareMessageRegistry(
+				retimerToUpdate, "ApplyFailed",
+				MSG_REG_DEV_FOLLOWED_BY_VER,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 			goto exit;
 		}
+		prepareMessageRegistry(
+			retimerToUpdate, "UpdateSuccessful",
+			MSG_REG_DEV_FOLLOWED_BY_VER,
+			"xyz.openbmc_project.Logging.Entry.Level.Informational",
+			NULL);
+
+		prepareMessageRegistry(
+			retimerToUpdate, "AwaitToActivate",
+			MSG_REG_DEV_FOLLOWED_BY_VER,
+			"xyz.openbmc_project.Logging.Entry.Level.Informational",
+			"Perform AC Power Cycle to activate programmed Firmware");
 		break;
 
 	case RETIMER_FW_READ: // 10.0 Read Retimer image
