@@ -18,7 +18,7 @@ executable('aries-test', test_sources,
                               phosphor_logging,
                               i2c
                             ],
-               install : true,
+               install : get_option('install_aries_tools'),
                install_dir : get_option('bindir'))
 
 executable('aries-update', flash_sources,
@@ -27,7 +27,7 @@ executable('aries-update', flash_sources,
                               phosphor_logging,
                               i2c
                             ],
-               install : true,
+               install : get_option('install_aries_tools'),
                install_dir : get_option('bindir'))
 
 executable('aries-info', info_sources,
@@ -36,5 +36,5 @@ executable('aries-info', info_sources,
                               phosphor_logging,
                               i2c
                             ],
-               install : true,
+               install : get_option('install_aries_tools'),
                install_dir : get_option('bindir'))
