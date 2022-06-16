@@ -132,8 +132,7 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Start FW update procedure...\n");
 		fprintf(stdout, "Read FW Image...%s Verion %s \n",
 			imageFilename, versionStr);
-		fprintf(stdout, "Retimer under update ...%s %d \n",
-			arrRetimer[retimerNum], retimerNum);
+		fprintf(stdout, "Retimer under update ...%d \n", retimerNum);
 
 		prepareMessageRegistry(
 			retimerToUpdate, "TargetDetermined",
