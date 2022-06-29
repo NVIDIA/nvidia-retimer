@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	}
 
 	retimerNum = atoi(argv[2]);
-	retimerToUpdate = mask_retimer[atoi(argv[2])];
+	retimerToUpdate = atoi(argv[2]);
 	retimerToRead = atoi(argv[2]);
 
 	// read version from image name

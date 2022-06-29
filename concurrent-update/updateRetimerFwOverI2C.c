@@ -270,7 +270,7 @@ int checkDigit_i2c(char *str)
 int checkDigit_retimer(char *str)
 {
 	uint8_t i;
-	if (atoi(str) > 8) {
+	if (atoi(str) > 255) {
 		fprintf(stderr, "Retimer number Out of Range\n");
 		return 1;
 	}
