@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
 	uint8_t retimerToUpdate = INIT_UINT8;
 	uint8_t retimerToRead = INIT_UINT8;
 	uint8_t command = INIT_UINT8;
+	uint32_t imageFilenameSize = 0;
 	int imagefd = -1;
 	int dummyfd = -1;
 
@@ -93,8 +94,14 @@ int main(int argc, char *argv[])
 	retimerToUpdate = atoi(argv[2]);
 	retimerToRead = atoi(argv[2]);
 
-	// read version from image name
-	strcpy(imageFilename, argv[3]);
+	/* Check if passed filename is too small for imageFilename buffer*/
+	imageFilenameSize = sizeof(argv[3]);
+	if (imageFilenameSize >= MAX_NAME_SIZE) {
+		ret = -ERROR_INPUT_ARGUMENTS;
+		goto exit;
+	}
+
+	strncpy(imageFilename, argv[3], imageFilenameSize);
 
 	command = atoi(argv[4]);
 
@@ -146,6 +153,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error opening file: %s\n",
 				strerror(errno));
 			close(imagefd);
+			imagefd = -1;
 			prepareMessageRegistry(
 				retimerToUpdate, "VerificationFailed",
 				MSG_REG_DEV_FOLLOWED_BY_VER,
@@ -206,13 +214,13 @@ int main(int argc, char *argv[])
 		if (dummyfd < 0) {
 			fprintf(stderr, "Error creating file: %s\n",
 				strerror(errno));
-			close(dummyfd);
 		}
 
 		if (ftruncate(dummyfd, MAX_FW_IMAGE_SIZE) < 0) {
 			fprintf(stderr,
 				"FW READ for Retimer failed for retimer !!!");
 			close(dummyfd);
+			dummyfd = -1;
 			goto exit;
 		}
 
@@ -244,6 +252,7 @@ int main(int argc, char *argv[])
 			goto exit;
 		}
 		close(dummyfd);
+		dummyfd = -1;
 		break;
 
 	default:

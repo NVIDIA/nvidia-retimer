@@ -41,13 +41,13 @@ void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 			fprintf(stderr, "Unable to call log creation function");
 		}
 	} else {
-		if (sd_bus_call_method(
-			    bus, LOG_SERVICE, LOG_PATH, LOG_CREATE_INTERFACE,
-			    LOG_CREATE_FUNCTION, &err, &reply,
-			    LOG_CREATE_SIGNATURE, updateMessage, severity, 3,
-			    "REDFISH_MESSAGE_ID", updateMessage,
-			    "REDFISH_MESSAGE_ARGS", args,
-			    "namespace", "FWUpdate") < 0) {
+		if (sd_bus_call_method(bus, LOG_SERVICE, LOG_PATH,
+				       LOG_CREATE_INTERFACE,
+				       LOG_CREATE_FUNCTION, &err, &reply,
+				       LOG_CREATE_SIGNATURE, updateMessage,
+				       severity, 3, "REDFISH_MESSAGE_ID",
+				       updateMessage, "REDFISH_MESSAGE_ARGS",
+				       args, "namespace", "FWUpdate") < 0) {
 			fprintf(stderr, "Unable to call log creation function");
 		}
 	}

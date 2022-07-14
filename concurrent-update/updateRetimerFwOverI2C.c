@@ -29,11 +29,11 @@ const uint8_t mask_retimer[] = { RETIMER0, RETIMER1, RETIMER2,
 
 uint8_t verbosity = 0;
 
-char *arrRetimer[] = { "PCIeRetimer0Firmware", "PCIeRetimer1Firmware",
-		       "PCIeRetimer2Firmware", "PCIeRetimer3Firmware",
-		       "PCIeRetimer4Firmware", "PCIeRetimer5Firmware",
-		       "PCIeRetimer6Firmware", "PCIeRetimer7Firmware",
-		       };
+char *arrRetimer[] = {
+	"PCIeRetimer0Firmware", "PCIeRetimer1Firmware", "PCIeRetimer2Firmware",
+	"PCIeRetimer3Firmware", "PCIeRetimer4Firmware", "PCIeRetimer5Firmware",
+	"PCIeRetimer6Firmware", "PCIeRetimer7Firmware",
+};
 
 uint8_t retimerNum = INIT_UINT8;
 
@@ -333,10 +333,9 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 		fprintf(stderr, "ret:%d  unable to read FW file error %s \n",
 			ret, strerror(errno));
 		close(fw_fd);
+		free(fw_buf);
 		return -ERROR_OPEN_FIRMWARE;
 	}
-
-	//close(fw_fd);
 
 	// calculate CRC32
 	fw_crc32 = crc32(fw_buf, st.st_size);
@@ -505,6 +504,8 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 
 	fw_buf = (unsigned char *)malloc(st.st_size);
 
+	memset(fw_buf, 0, st.st_size);
+
 	if (fw_buf == NULL) {
 		return -ERROR_MALLOC_FAILURE;
 	}
@@ -541,6 +542,7 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 		fprintf(stderr, "ret:%d  unable to read FW file error %s \n",
 			ret, strerror(errno));
 		close(fw_fd);
+		free(fw_buf);
 		return -ERROR_OPEN_FIRMWARE;
 	}
 
@@ -549,7 +551,6 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	free(fw_buf);
 	return 0;
 }
-//payload ->
 /*******************************************************************************
  * checkWriteNackError()
  *
