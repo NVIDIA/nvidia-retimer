@@ -30,9 +30,9 @@ const uint8_t mask_retimer[] = { RETIMER0, RETIMER1, RETIMER2,
 uint8_t verbosity = 0;
 
 char *arrRetimer[] = {
-	"PCIeRetimer0Firmware", "PCIeRetimer1Firmware", "PCIeRetimer2Firmware",
-	"PCIeRetimer3Firmware", "PCIeRetimer4Firmware", "PCIeRetimer5Firmware",
-	"PCIeRetimer6Firmware", "PCIeRetimer7Firmware",
+	"HGX_FW_PCIeRetimer_0", "HGX_FW_PCIeRetimer_1", "HGX_FW_PCIeRetimer_2",
+	"HGX_FW_PCIeRetimer_3", "HGX_FW_PCIeRetimer_4", "HGX_FW_PCIeRetimer_5",
+	"HGX_FW_PCIeRetimer_6", "HGX_FW_PCIeRetimer_7",
 };
 
 uint8_t retimerNum = INIT_UINT8;
