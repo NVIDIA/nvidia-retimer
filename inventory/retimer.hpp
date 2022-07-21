@@ -40,7 +40,7 @@ class Retimer : public RtInherit, public Util
 
     Retimer(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
         uint8_t address, const std::string& name) :
-        RtInherit(bus, (objPath).c_str(), true),
+        RtInherit(bus, (objPath).c_str(), RtInherit::action::defer_emit),
         bus(bus)
     {
 
