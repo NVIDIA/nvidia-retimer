@@ -95,13 +95,14 @@ int main(int argc, char *argv[])
 	retimerToRead = atoi(argv[2]);
 
 	/* Check if passed filename is too small for imageFilename buffer*/
-	imageFilenameSize = sizeof(argv[3]);
+	imageFilenameSize = strlen(argv[3]);
+
 	if (imageFilenameSize >= MAX_NAME_SIZE) {
 		ret = -ERROR_INPUT_ARGUMENTS;
 		goto exit;
 	}
 
-	strncpy(imageFilename, argv[3], imageFilenameSize);
+	strncpy(imageFilename, argv[3], imageFilenameSize+1);
 
 	command = atoi(argv[4]);
 
