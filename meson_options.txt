@@ -26,4 +26,8 @@ option('install_aries_tools',
        type: 'boolean',
        description: 'Install aries tools aries-test, aries-info and aries-update.',
        value: false)
+option('retimer_app_support',
+       type: 'boolean',
+       description: 'Retimer app to update retimer inventory properties.',
+       value: false)
 

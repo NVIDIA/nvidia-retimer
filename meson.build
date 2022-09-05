@@ -33,6 +33,9 @@ subdir('concurrent-update')
 subdir('inventory')
 subdir('services')
 subdir('aries-fw-update')
+if get_option('retimer_app_support')
+  subdir('nvidia-retimer-app')
+endif
 
 if get_option('tests').enabled()
   subdir('test')

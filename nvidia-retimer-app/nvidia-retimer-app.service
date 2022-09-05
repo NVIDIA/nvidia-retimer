@@ -1,0 +1,10 @@
+[Unit]
+Description=NVIDIA Retimer Application to update D-Bus properties
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/env nvidia-retimer-app
+SyslogIdentifier=nvidia-retimer-app
+
+[Install]
+WantedBy=multi-user.target
