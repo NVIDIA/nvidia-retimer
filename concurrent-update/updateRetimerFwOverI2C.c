@@ -669,7 +669,8 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
  *
  * RETURN: 0 if success
  ********************************************************************/
-int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
+int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
+			 uint8_t *retimerNotupdated)
 {
 	unsigned char write_buffer[WRITE_BUF_SIZE] = { 0 };
 	unsigned char read_buffer[READ_BUF_SIZE] = { 0 };
@@ -758,7 +759,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 		uint8_t status_checksum = read_buffer[3];
 		uint8_t retryUpdate4Retimer = 0;
 
-		if (status_verfication) {
+		if (status_verfication || status_writeNack || status_readNack ||
+		    status_checksum) {
 			fprintf(stdout,
 				"FW update...completed, checking status !!! \n");
 			if (status_writeNack) {
@@ -783,6 +785,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL);
 			}
+
 			if (status_checksum) {
 				ret |= checkChecksumError(status_checksum,
 							  mask_retimer,
@@ -795,8 +798,9 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber)
 					NULL);
 			}
 			retimerNumber = retryUpdate4Retimer;
+			*retimerNotupdated = retryUpdate4Retimer;
 			fprintf(stderr,
-				"FW update...not completed, its timeout !!! \n");
+				"FW update...not succeeded, Retry !!! \n");
 		} else {
 			fprintf(stdout,
 				"FW update...completed, No Retry !!! \n");

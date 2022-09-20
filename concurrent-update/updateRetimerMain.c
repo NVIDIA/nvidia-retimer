@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	char imageFilename[MAX_NAME_SIZE];
 	uint8_t retimerToUpdate = INIT_UINT8;
+	uint8_t retimerNotUpdated = INIT_UINT8;
 	uint8_t retimerToRead = INIT_UINT8;
 	uint8_t command = INIT_UINT8;
 	uint32_t imageFilenameSize = 0;
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
-	strncpy(imageFilename, argv[3], imageFilenameSize+1);
+	strncpy(imageFilename, argv[3], imageFilenameSize + 1);
 
 	command = atoi(argv[4]);
 
@@ -181,16 +182,33 @@ int main(int argc, char *argv[])
 		}
 
 		// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
-		ret = startRetimerFwUpdate(fd, retimerToUpdate);
+		ret = startRetimerFwUpdate(fd, retimerToUpdate,
+					   &retimerNotUpdated);
 		if (ret) {
 			fprintf(stderr,
-				"FW Update for Retimer failed for retimer with error code%d!!!",
-				ret);
+				"FW Update for Retimer failed for retimer with error code%d retimerNotUpdated %d!!!",
+				ret, retimerNotUpdated);
 			prepareMessageRegistry(
-				retimerToUpdate, "ApplyFailed",
+				retimerNotUpdated, "ApplyFailed",
 				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL);
+
+			if (retimerToUpdate ^ retimerNotUpdated) {
+				prepareMessageRegistry(
+					(retimerToUpdate ^ retimerNotUpdated),
+					"UpdateSuccessful",
+					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"xyz.openbmc_project.Logging.Entry.Level.Informational",
+					NULL);
+
+				prepareMessageRegistry(
+					(retimerToUpdate ^ retimerNotUpdated),
+					"AwaitToActivate",
+					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"xyz.openbmc_project.Logging.Entry.Level.Informational",
+					"Perform AC Power Cycle to activate programmed Firmware");
+			}
 			goto exit;
 		}
 		prepareMessageRegistry(

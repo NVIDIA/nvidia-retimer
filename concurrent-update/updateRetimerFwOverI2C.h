@@ -173,5 +173,6 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd,
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
-int startRetimerFwUpdate(int fd, uint8_t retimerNumber);
+int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
+			 uint8_t *retimerNotUpdated);
 int readRetimerfw(int fd, uint8_t retimerNumber);
