@@ -17,10 +17,8 @@ const size_t numOfRetimers = 8;
 // software id maps to component identifer in the package
 constexpr auto retimerSoftwareId = "0x8000";
 const std::string retimerSwitchesBasePath =
-    "/xyz/openbmc_project/inventory/system/fabrics/HGX_PCIeRetimerTopology_0/"
-    "Switches/";
-const std::string retimerSwitchesPath =
-    retimerSwitchesBasePath + "PCIeRetimer_";
+    "/xyz/openbmc_project/inventory/system/fabrics/HGX_PCIeRetimerTopology_";
+const std::string retimerSwitchesPath = "/Switches/PCIeRetimer_";
 const std::string retimerInventoryPath =
     "/xyz/openbmc_project/inventory/system/chassis/HGX_PCIeRetimer_";
 const std::string retimerFWInventoryBasePath = "/xyz/openbmc_project/software/";

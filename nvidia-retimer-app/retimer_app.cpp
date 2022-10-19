@@ -100,13 +100,13 @@ void RetimerApp::switchObjectCallback(sdbusplus::message::message &m)
     DBusMapping dbusMap;
     std::string path = m.get_path();
 
-    if (path.find(retimerSwitchesPath) == 0)
+    if (path.find(retimerSwitchesBasePath) == 0)
     {
         std::string skuId = getSKUId(path);
         if (!skuId.empty())
         {
-            dbusMap.objectPath =
-                retimerInventoryPath + path.substr(retimerSwitchesPath.size());
+            std::string retimerId = path.substr(path.rfind("_") + 1);
+            dbusMap.objectPath = retimerInventoryPath + retimerId;
             dbusMap.interface = assetInterface;
             dbusMap.propertyName = "SKU";
             try
