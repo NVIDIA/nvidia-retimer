@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 					"AwaitToActivate",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Informational",
-					"Perform AC Power Cycle to activate programmed Firmware");
+					"AC power cycle");
 			}
 			goto exit;
 		}
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 			retimerToUpdate, "AwaitToActivate",
 			MSG_REG_DEV_FOLLOWED_BY_VER,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			"Perform AC Power Cycle to activate programmed Firmware");
+			"AC power cycle");
 		break;
 
 	case RETIMER_FW_READ: // 10.0 Read Retimer image
