@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 			retimerToUpdate, "TargetDetermined",
 			MSG_REG_DEV_FOLLOWED_BY_VER,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL);
+			NULL, 0);
 
 		imagefd = open(imageFilename, O_RDONLY);
 
@@ -160,13 +160,13 @@ int main(int argc, char *argv[])
 				retimerToUpdate, "VerificationFailed",
 				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				NULL, 0);
 		}
 		prepareMessageRegistry(
 			retimerToUpdate, "TransferringToComponent",
 			MSG_REG_VER_FOLLOWED_BY_DEV,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL);
+			NULL, 0);
 
 		ret = copyImageToFpga(imagefd, fd, FPGA_I2C_CNTRL_ADDR);
 		if (ret) {
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 				retimerToUpdate, "TransferFailed",
 				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				NULL, 0);
 			goto exit;
 		}
 
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 				retimerNotUpdated, "ApplyFailed",
 				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				NULL, 0);
 
 			if (retimerToUpdate ^ retimerNotUpdated) {
 				prepareMessageRegistry(
@@ -200,14 +200,14 @@ int main(int argc, char *argv[])
 					"UpdateSuccessful",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Informational",
-					NULL);
+					NULL, 0);
 
 				prepareMessageRegistry(
 					(retimerToUpdate ^ retimerNotUpdated),
 					"AwaitToActivate",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Informational",
-					"AC power cycle");
+					"AC power cycle", 0);
 			}
 			goto exit;
 		}
@@ -215,13 +215,13 @@ int main(int argc, char *argv[])
 			retimerToUpdate, "UpdateSuccessful",
 			MSG_REG_DEV_FOLLOWED_BY_VER,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL);
+			NULL, 0);
 
 		prepareMessageRegistry(
 			retimerToUpdate, "AwaitToActivate",
 			MSG_REG_DEV_FOLLOWED_BY_VER,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			"AC power cycle");
+			"AC power cycle", 0);
 		break;
 
 	case RETIMER_FW_READ: // 10.0 Read Retimer image

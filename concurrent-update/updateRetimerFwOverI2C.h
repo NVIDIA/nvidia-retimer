@@ -73,6 +73,16 @@
 #define CPLD_SLAVE_ID 0x3c
 #define CPLD_GB_OFFSET 0x2b
 
+// FPGA Secondary RegTBL slave address for extended error reporting
+#define FPGA_SECONDARY_REGTBL 0x31
+#define FPGA_SEC_REGTBL_FWCONTROLLER_OFFSET 0x4B
+#define HMC_I2CBUS_FPGA_SEC_REGTBL 0x2
+#define EXTENDED_ERR_MAX_PAGE_SZ 256
+#define NO_ERR 0x0
+#define GLOBAL_WP_L_MASK 0x10
+#define RET_MUX_SEL_MASK 0x0F
+#define UNKNOWN_ERROR "Unknown Error"
+
 #define VERSION_LEN 10
 #define INVALID -1
 
@@ -154,15 +164,46 @@ typedef enum command {
 	RETIMER_FW_READ = 0x1, /**< To read Retimer FW */
 } RetimerFWCommand;
 
+/**
+* @brief *
+* structure for I2C Transaction based Error Codes for Retimer FW update 
+* from FPGA INTERNAL ARCHITECTURE SPECIFICATION
+* RETx_EEPROM_UPDATE_I2C_ERROR_ADDR & RETx_EEPROM_UPDATE_I2C_ERROR_CODE
+* 
+**/
+typedef struct {
+	uint8_t RET_EEPROM_I2C_ERROR_ADDR;
+	uint8_t RET_EEPROM_I2C_ERROR_CODE;
+} RetimerAddrErrorCode;
+
+/**
+* @brief *
+* structure to map RegTBL register for Retimer FW update
+* refer Vulcan I2C Request Form - Google Sheets for details
+**/
+typedef struct {
+	RetimerAddrErrorCode AddrErrorCode[8];
+	uint8_t globalWp;
+	uint8_t retimerEEPROMmuxSel;
+} extendedErrorCode;
+
+typedef struct pair {
+	uint8_t errorCode;
+	char *errorString;
+} ErrorCodeMapTable;
+
 void debug_print(char *fmt, ...);
 void prepareMessageRegistry(uint8_t retimer, char *message,
 			    bool verBeforeDevice, char *severity,
-			    char *resolution);
+			    char *resolution, bool genericMessage);
 unsigned int crc32(const unsigned char *buf, int length);
 int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 		 unsigned char *write_data, unsigned char *read_data,
 		 unsigned int write_count, unsigned int read_count);
-
+int checkExtenedErrorReg();
+void genericMessageRegistry(char *message, char *arg0, char *arg1,
+			    char *severity, char *resolution);
+char *maperrnoToI2CError(int errnoval,unsigned char slaveId);
 int checkDigit_i2c(char *str);
 int checkDigit_retimer(char *str);
 int parseStr(const char *in, int startid, int endid, char *op);

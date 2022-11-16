@@ -14,7 +14,7 @@
 #define LOG_CREATE_SIGNATURE "ssa{ss}"
 
 void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
-		    char *resolution)
+		    char *resolution, bool genericMessage)
 {
 	static sd_bus *bus = NULL;
 	sd_bus_default_system(&bus);
@@ -27,7 +27,12 @@ void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 	char args[BUFFER_LENGTH];
 	char updateMessage[BUFFER_LENGTH];
 	snprintf(args, BUFFER_LENGTH, "%s,%s", arg0, arg1);
-	snprintf(updateMessage, BUFFER_LENGTH, "Update.1.0.%s", message);
+	if (genericMessage) {
+		snprintf(updateMessage, BUFFER_LENGTH, "%s", message);
+	} else
+		snprintf(updateMessage, BUFFER_LENGTH, "Update.1.0.%s",
+			 message);
+
 	debug_print("Attempting call\n");
 	if (resolution) {
 		if (sd_bus_call_method(

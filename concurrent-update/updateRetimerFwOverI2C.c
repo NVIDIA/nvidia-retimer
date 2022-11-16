@@ -37,6 +37,22 @@ char *arrRetimer[] = {
 
 uint8_t retimerNum = INIT_UINT8;
 
+/*
+* Extended Error handling for Retimer FW update, ERR_PCIE_TIMEOUT_STOPPED_RT_EEPROM_UPDATE 
+* only applicable when Retimer FW update trigger over PCIe path
+**/
+ErrorCodeMapTable table[] = {
+	{ 0x00, "NO_ERR" },
+	{ 0x05, "ERR_I2C_CONTROLLER_FSM_TIMEOUT " },
+	{ 0x06, "ERR_I2C_DOWNSTREAM_TIMEOUT " },
+	{ 0x07, "ERR_I2C_NACK_FROM_DEV_ADDR " },
+	{ 0x08, "ERR_I2C_NACK_FROM_DEV_CMD_DATA" },
+	{ 0x09, "ERR_I2C_NACK_FROM_DEV_ADDR_RS " },
+	{ 0x15, "ERR_PCIE_TIMEOUT_STOPPED_RT_EEPROM_UPDATE " }
+};
+
+volatile extendedErrorCode *dumpExtendedI2CReg = NULL;
+
 void debug_print(char *fmt, ...)
 {
 	if (verbosity) {
@@ -52,13 +68,15 @@ void debug_print(char *fmt, ...)
  * prepareMessageRegistry()
  * 
  * Wrappper on top of emitLogMessage.
- * Message registry is updated based on passed Retimer,successfully updated retimer and failed Retimer
+ * Message registry is updated based on Retimer.
+ * This wrapper is specific to handle TransferFailed,TargetDetermined,
+ * UpdateSuccessful and AwaitToActivate
  *
  * RETURN: void 
  **********************************************************************/
 void prepareMessageRegistry(uint8_t retimer, char *message,
 			    bool VerBeforeDevice, char *severity,
-			    char *resolution)
+			    char *resolution, bool genericMessage)
 {
 	if (retimer) {
 		for (uint8_t index = 0; index < 8; index++) {
@@ -66,17 +84,36 @@ void prepareMessageRegistry(uint8_t retimer, char *message,
 				if (VerBeforeDevice) {
 					emitLogMessage(message, versionStr,
 						       arrRetimer[index],
-						       severity, resolution);
+						       severity, resolution,
+						       genericMessage);
 				} else {
 					emitLogMessage(message,
 						       arrRetimer[index],
 						       versionStr, severity,
-						       resolution);
+						       resolution,
+						       genericMessage);
 				}
 			}
 			retimer = retimer >> 1;
 		}
 	}
+}
+
+/***********************************************************************
+ *
+ * genericMessageRegistry()
+ *
+ * Wrappper on top of emitLogMessage to pass generic error message.
+ * This wrapper is handle specific/custom args with messageID 
+ * ResourceEvent.1.0.ResourceErrorsDetected 
+ *
+ * RETURN: void
+ **********************************************************************/
+
+void genericMessageRegistry(char *message, char *arg0, char *arg1,
+			    char *severity, char *resolution)
+{
+	emitLogMessage(message, arg0, arg1, severity, resolution, true);
 }
 
 /***********************************************
@@ -178,7 +215,8 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 {
 	struct i2c_rdwr_ioctl_data rdwr_msg;
 	struct i2c_msg msg[2];
-	int ret;
+	int ret = -1;
+	int i2c_errno = 0;
 
 	memset(&rdwr_msg, 0, sizeof(rdwr_msg));
 	memset(&msg, 0, sizeof(msg));
@@ -223,10 +261,201 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 		rdwr_msg.nmsgs = 1;
 	}
 	if ((ret = ioctl(fd, I2C_RDWR, &rdwr_msg)) < 0) {
-		fprintf(stderr, "ret:%d  error %s \n", ret, strerror(errno));
+		i2c_errno = errno;
+		fprintf(stderr, "ret:%d  error %s \n", ret,
+			strerror(i2c_errno));
+		genericMessageRegistry(
+			"ResourceEvent.1.0.ResourceErrorsDetected", "HGX_PCIeRetimer Update Service",
+			maperrnoToI2CError(i2c_errno,slaveId),
+			"xyz.openbmc_project.Logging.Entry.Level.Critical",
+			NULL);
 		return -ERROR_IOCTL_I2C_RDWR_FAILURE;
 	}
 
+	return 0;
+}
+
+/**************************************************************
+ * maperrnoToI2CError()
+ *
+ * this function is mapping generic I2C driver error reported in form of 
+ * errno in specific I2C ERROR string to make it more readable to user
+ *
+ * RETURN: string as per mapping or default strerror 
+ *****************************************************************/
+
+char *maperrnoToI2CError(int errnoval,unsigned char slaveId)
+{
+	char *msg;
+	static char buf[64];
+
+	switch (errnoval) {
+	case ENODEV:
+		sprintf(buf, "Slave not found, slave address 0x%x", slaveId);
+		msg = buf;
+		break;
+	case EAGAIN:
+		sprintf(buf,
+			"ARB_LOST:ASPEED_I2CD_INTR_ARBIT_LOSS, slave address 0x%x",
+			slaveId);
+		msg = buf;
+		break;
+	case ETIMEDOUT:
+		sprintf(buf, "SCL Clock stretching too far, slave address 0x%x",
+			slaveId);
+		msg = buf;
+		break;
+	case ENXIO:
+		sprintf(buf,
+			"Address phase NACK:ASPEED_I2CD_INTR_TX_NAK, slave address 0x%x",
+			slaveId);
+		msg = buf;
+		break;
+	case EBUSY:
+		sprintf(buf, "BUS BUSY:SDA/SCL Timeout, slave address 0x%x", slaveId);
+		msg = buf;
+		break;
+	default:
+		sprintf(buf, "Error %s, slave address 0x%x", strerror(errnoval),slaveId);
+		msg = buf;
+		break;
+	}
+
+	return (msg);
+}
+
+/**************************************************************
+ * parseExI2CErrorCode()
+ *
+ * FPFA Seconday regtbl capture I2C errors during FW update operation
+ * Each error code captured in ERRORCODE register is as per definition 
+ * captured in FPGA IAS.
+ * Applicable errors to FW update controller over I2C are maintained in table[] 
+ *
+ * RETURN: error string if success
+ *****************************************************************/
+
+char *parseExI2CErrorCode(uint8_t errorCode)
+{
+	for (int i = 0; i < (int)(sizeof(table) / (sizeof table[0])); ++i) {
+		if (table[i].errorCode == errorCode) {
+			return table[i].errorString;
+		}
+	}
+	return UNKNOWN_ERROR;
+}
+
+/**************************************************************
+ * checkExtenedErrorReg()
+ *
+ * Dump Extended I2C register at offset 0x1 secondary regtbl of 
+ * FPGA regmap at slave ID 0x31.
+ * Refer to Vulcan IAS chapter 3.15.4 for details
+ *
+ * RETURN: 0 if success
+ *****************************************************************/
+
+int checkExtenedErrorReg()
+{
+	uint8_t write_buffer[2];
+	uint8_t read_buffer[EXTENDED_ERR_MAX_PAGE_SZ];
+	char i2c_device[MAX_NAME_SIZE] = { 0 };
+	int exfd = -1;
+	uint8_t slaveID = FPGA_SECONDARY_REGTBL;
+	uint8_t bus =
+		HMC_I2CBUS_FPGA_SEC_REGTBL; //On HMC, FPGA_SECONDARY_REGTBL is enumerated on bus 2
+	int ret = -1;
+
+	sprintf(i2c_device, "/dev/i2c-%d", bus);
+
+	exfd = open(i2c_device, O_RDWR | O_NONBLOCK);
+
+	if (exfd < 0) {
+		fprintf(stderr, "checkExDumpReg Error opening i2c file: %s\n",
+			strerror(errno));
+		return ERROR_OPEN_I2C_DEVICE;
+	}
+
+	memset(write_buffer, 0x00, sizeof(write_buffer));
+	memset(read_buffer, 0x00, sizeof(read_buffer));
+
+	write_buffer[0] = 0x0;
+	write_buffer[1] = 0x1; // Read from offset 0x1
+
+	ret = send_i2c_cmd(exfd, FPGA_READ, slaveID, write_buffer, read_buffer,
+			   2, EXTENDED_ERR_MAX_PAGE_SZ);
+	if (ret) {
+		fprintf(stderr,
+			"checkExDumpReg FPGA_WRITE failed write_buffer: 0x%x 0x%x \n",
+			write_buffer[0], write_buffer[1]);
+		return -1;
+	}
+
+	dumpExtendedI2CReg =
+		(extendedErrorCode
+			 *)&read_buffer[FPGA_SEC_REGTBL_FWCONTROLLER_OFFSET];
+
+	// parse extended i2c error register dump as per extendedErrorCode
+	for (int index = 0; index < RETIMER_MAX_NUM; index++) {
+		if ((dumpExtendedI2CReg->AddrErrorCode[index]
+			     .RET_EEPROM_I2C_ERROR_ADDR != NO_ERR) &&
+		    (dumpExtendedI2CReg->AddrErrorCode[index]
+			     .RET_EEPROM_I2C_ERROR_CODE != NO_ERR)) {
+			char *arg = parseExI2CErrorCode(
+				dumpExtendedI2CReg->AddrErrorCode[index]
+					.RET_EEPROM_I2C_ERROR_CODE);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arrRetimer[index], arg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
+		}
+	}
+
+	debug_print(
+		"checkExDumpReg Dump Ex Reg  ...globalWp :0x%x retimerEEPROMmuxSel :0x%x\n",
+		dumpExtendedI2CReg->globalWp,
+		dumpExtendedI2CReg->retimerEEPROMmuxSel);
+
+	//check if globalWp is active,globalWp is active low signal
+	if ((dumpExtendedI2CReg->globalWp & GLOBAL_WP_L_MASK) == 0x00) {
+		genericMessageRegistry(
+			"ResourceEvent.1.0.ResourceErrorsDetected",
+			"GlobalWP", "Enabled",
+			"xyz.openbmc_project.Logging.Entry.Level.Critical",
+			NULL);
+	}
+
+	//check if retimerEEPROMmuxSel,it should not be set after fwupdate operation
+	if ((dumpExtendedI2CReg->retimerEEPROMmuxSel & RET_MUX_SEL_MASK) !=
+	    0x00) {
+		char str[MAX_NAME_SIZE] = { 0 };
+		switch (dumpExtendedI2CReg->retimerEEPROMmuxSel) {
+		case 1:
+			strcpy(str, "RET_0123_MUX_SEL_HW");
+			break;
+		case 2:
+			strcpy(str, "RET_4567_MUX_SEL_HW");
+			break;
+		case 4:
+			strcpy(str, "oRET_0123_MUX_SEL");
+			break;
+		case 8:
+			strcpy(str, "oRET_4567_MUX_SEL");
+			break;
+		default:
+			break;
+		}
+		genericMessageRegistry(
+			"ResourceEvent.1.0.ResourceErrorsDetected",
+			"retimerEEPROMmuxSel", str,
+			"xyz.openbmc_project.Logging.Entry.Level.Critical",
+			NULL);
+	}
+
+	if (exfd != -1) {
+		close(exfd);
+	}
 	return 0;
 }
 
@@ -565,6 +794,7 @@ int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 {
 	int ret = -ERROR_WRITE_NACK;
+	char arg[MAX_NAME_SIZE] = { 0 };
 	// read NACK error
 	for (int i = 8; i >= 0; i--) {
 		if ((i == 8) && ((status & mask[i]) == 0xFF)) {
@@ -572,6 +802,12 @@ int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer WRITE NACK error...%d retimer 0x%x\n",
 				i, *retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "Write Nack Error",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -579,6 +815,12 @@ int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer WRITE NACK error...%d retimer 0x%x\n",
 				i, *retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "Write Nack ERROR",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 		}
 	}
 
@@ -601,6 +843,7 @@ int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 {
 	int ret = -ERROR_READ_NACK;
+	char arg[MAX_NAME_SIZE] = { 0 };
 	// read NACK error
 	for (int i = 8; i >= 0; i--) {
 		if ((i == 8) && ((status & mask[i]) == 0xFF)) {
@@ -608,6 +851,12 @@ int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer READ NACK error...%d retimer 0x%x\n",
 				i, *retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "Read NACK Error",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -615,6 +864,12 @@ int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer READ NACK error...%d retimer 0x%x\n",
 				i, *retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "Read NACK Error",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 		}
 	}
 
@@ -637,6 +892,7 @@ int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 {
 	int ret = -ERROR_CHECKSUM;
+	char arg[MAX_NAME_SIZE] = { 0 };
 	// read CheckSum error
 	for (int i = 8; i >= 0; i--) {
 		if ((i == 8) && ((status & mask[i]) == 0xFF)) {
@@ -644,6 +900,12 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer CheckSum error...%d retimer 0x%x\n", i,
 				*retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "CheckSum mismatch",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -651,6 +913,12 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 			fprintf(stderr,
 				"Retimer CheckSum error...%d retimer 0x%x\n", i,
 				*retimer);
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				arg, "CheckSum mismatch",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL);
 		}
 	}
 
@@ -768,11 +1036,10 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
-					retryUpdate4Retimer,
-					"VerificationFailed",
+					retryUpdate4Retimer, "TransferFailed",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL);
+					NULL, 0);
 			}
 			if (status_readNack) {
 				ret |= checkReadNackError(status_readNack,
@@ -783,7 +1050,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 					"VerificationFailed",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL);
+					NULL, 0);
 			}
 
 			if (status_checksum) {
@@ -795,8 +1062,17 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 					"VerificationFailed",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL);
+					NULL, 0);
 			}
+
+			// Check ExtenededI2CErrorRegister
+			if (checkExtenedErrorReg() < 0) {
+				fprintf(stderr,
+					" unable to parse extended error register %s \n",
+					strerror(errno));
+				return -ERROR_OPEN_FIRMWARE;
+			}
+
 			retimerNumber = retryUpdate4Retimer;
 			*retimerNotupdated = retryUpdate4Retimer;
 			fprintf(stderr,
