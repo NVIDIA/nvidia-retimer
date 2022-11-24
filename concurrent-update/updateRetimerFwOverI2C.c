@@ -1037,7 +1037,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
 					retryUpdate4Retimer, "TransferFailed",
-					MSG_REG_DEV_FOLLOWED_BY_VER,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
 			}

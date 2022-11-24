@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 				ret, retimerNotUpdated);
 			prepareMessageRegistry(
 				retimerNotUpdated, "ApplyFailed",
-				MSG_REG_DEV_FOLLOWED_BY_VER,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
 
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 				prepareMessageRegistry(
 					(retimerToUpdate ^ retimerNotUpdated),
 					"AwaitToActivate",
-					MSG_REG_DEV_FOLLOWED_BY_VER,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Informational",
 					"AC power cycle", 0);
 			}
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 
 		prepareMessageRegistry(
 			retimerToUpdate, "AwaitToActivate",
-			MSG_REG_DEV_FOLLOWED_BY_VER,
+			MSG_REG_VER_FOLLOWED_BY_DEV,
 			"xyz.openbmc_project.Logging.Entry.Level.Informational",
 			"AC power cycle", 0);
 		break;
