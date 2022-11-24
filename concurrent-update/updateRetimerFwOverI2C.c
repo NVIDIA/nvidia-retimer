@@ -217,6 +217,8 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 	struct i2c_msg msg[2];
 	int ret = -1;
 	int i2c_errno = 0;
+	char *message = NULL;
+	char *resolution = NULL;
 
 	memset(&rdwr_msg, 0, sizeof(rdwr_msg));
 	memset(&msg, 0, sizeof(msg));
@@ -264,11 +266,12 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 		i2c_errno = errno;
 		fprintf(stderr, "ret:%d  error %s \n", ret,
 			strerror(i2c_errno));
+		maperrnoToI2CError(i2c_errno, slaveId, &message, &resolution);
 		genericMessageRegistry(
-			"ResourceEvent.1.0.ResourceErrorsDetected", "HGX_PCIeRetimer Update Service",
-			maperrnoToI2CError(i2c_errno,slaveId),
+			"ResourceEvent.1.0.ResourceErrorsDetected",
+			"HGX_PCIeRetimer Update Service", message,
 			"xyz.openbmc_project.Logging.Entry.Level.Critical",
-			NULL);
+			resolution);
 		return -ERROR_IOCTL_I2C_RDWR_FAILURE;
 	}
 
@@ -284,44 +287,65 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
  * RETURN: string as per mapping or default strerror 
  *****************************************************************/
 
-char *maperrnoToI2CError(int errnoval,unsigned char slaveId)
+int maperrnoToI2CError(int errnoval, unsigned char slaveId, char **msg,
+		       char **resolution)
 {
-	char *msg;
 	static char buf[64];
+	static char res[256];
 
 	switch (errnoval) {
 	case ENODEV:
 		sprintf(buf, "Slave not found, slave address 0x%x", slaveId);
-		msg = buf;
+		*msg = buf;
+		sprintf(res,
+			"Reach out to the Nvidia support team for further action");
+		*resolution = res;
 		break;
 	case EAGAIN:
 		sprintf(buf,
 			"ARB_LOST:ASPEED_I2CD_INTR_ARBIT_LOSS, slave address 0x%x",
 			slaveId);
-		msg = buf;
+		*msg = buf;
+		sprintf(res,
+			"Retry the firmware update");
+		*resolution = res;
 		break;
 	case ETIMEDOUT:
 		sprintf(buf, "SCL Clock stretching too far, slave address 0x%x",
 			slaveId);
-		msg = buf;
+		*msg = buf;
+		sprintf(res,
+			"Perform Power Cycle of HGX baseboard and retry the firmware update");
+		*resolution = res;
 		break;
 	case ENXIO:
 		sprintf(buf,
 			"Address phase NACK:ASPEED_I2CD_INTR_TX_NAK, slave address 0x%x",
 			slaveId);
-		msg = buf;
+		*msg = buf;
+		sprintf(res,
+			"Perform Power Cycle of HGX baseboard and retry the firmware update");
+		*resolution = res;
 		break;
 	case EBUSY:
-		sprintf(buf, "BUS BUSY:SDA/SCL Timeout, slave address 0x%x", slaveId);
-		msg = buf;
+		sprintf(buf, "BUS BUSY:SDA/SCL Timeout, slave address 0x%x",
+			slaveId);
+		*msg = buf;
+		sprintf(res,
+			"Perform Power Cycle of HGX baseboard and retry the firmware update");
+		*resolution = res;
 		break;
 	default:
-		sprintf(buf, "Error %s, slave address 0x%x", strerror(errnoval),slaveId);
-		msg = buf;
+		sprintf(buf, "Error %s, slave address 0x%x", strerror(errnoval),
+			slaveId);
+		*msg = buf;
+		sprintf(res,
+			"Reach out to the Nvidia support team for further action");
+		*resolution = res;
 		break;
 	}
 
-	return (msg);
+	return 0;
 }
 
 /**************************************************************
@@ -421,9 +445,10 @@ int checkExtenedErrorReg()
 	if ((dumpExtendedI2CReg->globalWp & GLOBAL_WP_L_MASK) == 0x00) {
 		genericMessageRegistry(
 			"ResourceEvent.1.0.ResourceErrorsDetected",
-			"GlobalWP", "Enabled",
+			"HGX_FW_PCIeRetimer update service",
+			"Global Write Protect Enabled",
 			"xyz.openbmc_project.Logging.Entry.Level.Critical",
-			NULL);
+			"Disable write protect on the device and retry the firmware update operation.");
 	}
 
 	//check if retimerEEPROMmuxSel,it should not be set after fwupdate operation
@@ -450,7 +475,7 @@ int checkExtenedErrorReg()
 			"ResourceEvent.1.0.ResourceErrorsDetected",
 			"retimerEEPROMmuxSel", str,
 			"xyz.openbmc_project.Logging.Entry.Level.Critical",
-			NULL);
+			"Reach out to the nNvidia support team for further action");
 	}
 
 	if (exfd != -1) {
@@ -804,10 +829,10 @@ int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				i, *retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "Write Nack Error",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"Write Nack Error",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Perform Power Cycle of HGX baseboard and retry the firmware update");
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -817,10 +842,10 @@ int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				i, *retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "Write Nack ERROR",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"Write Nack ERROR",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Perform Power Cycle of HGX baseboard and retry the firmware update");
 		}
 	}
 
@@ -853,10 +878,10 @@ int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				i, *retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "Read NACK Error",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"Read NACK Error",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Perform Power Cycle of HGX baseboard and retry the firmware update");
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -866,10 +891,10 @@ int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				i, *retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "Read NACK Error",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"Read NACK Error",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Perform Power Cycle of HGX baseboard and retry the firmware update");
 		}
 	}
 
@@ -902,10 +927,10 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				*retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "CheckSum mismatch",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"CheckSum mismatch",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Retry the Retimer FW update");
 			break;
 		}
 		if (((status & mask[i]) >> i) == 1) {
@@ -915,10 +940,10 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 				*retimer);
 			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
 			genericMessageRegistry(
-				"ResourceEvent.1.0.ResourceErrorsDetected",
-				arg, "CheckSum mismatch",
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"CheckSum mismatch",
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL);
+				"Retry the Retimer FW update");
 		}
 	}
 
@@ -1039,7 +1064,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 					retryUpdate4Retimer, "TransferFailed",
 					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL, 0);
+					"Reach out to the NVIDIA support team for further action",
+					0);
 			}
 			if (status_readNack) {
 				ret |= checkReadNackError(status_readNack,
@@ -1050,7 +1076,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 					"VerificationFailed",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL, 0);
+					"Reach out to the NVIDIA support team for further action",
+					0);
 			}
 
 			if (status_checksum) {
@@ -1062,7 +1089,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 					"VerificationFailed",
 					MSG_REG_DEV_FOLLOWED_BY_VER,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					NULL, 0);
+					"Reach out to the NVIDIA support team for further action",
+					0);
 			}
 
 			// Check ExtenededI2CErrorRegister

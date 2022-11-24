@@ -203,7 +203,8 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 int checkExtenedErrorReg();
 void genericMessageRegistry(char *message, char *arg0, char *arg1,
 			    char *severity, char *resolution);
-char *maperrnoToI2CError(int errnoval,unsigned char slaveId);
+int maperrnoToI2CError(int errnoval, unsigned char slaveId, char **msg,
+		       char **resolution);
 int checkDigit_i2c(char *str);
 int checkDigit_retimer(char *str);
 int parseStr(const char *in, int startid, int endid, char *op);
