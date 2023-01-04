@@ -209,9 +209,8 @@ int checkDigit_i2c(char *str);
 int checkDigit_retimer(char *str);
 int parseStr(const char *in, int startid, int endid, char *op);
 int readFwVersion(char *str, char **ver);
-int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId);
-int copyImageFromFpga(unsigned int fw_fd, unsigned int fd,
-		      unsigned int slaveId);
+int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId);
+int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId);
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer);

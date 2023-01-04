@@ -154,13 +154,12 @@ int main(int argc, char *argv[])
 		if (imagefd < 0) {
 			fprintf(stderr, "Error opening file: %s\n",
 				strerror(errno));
-			close(imagefd);
-			imagefd = -1;
 			prepareMessageRegistry(
 				retimerToUpdate, "VerificationFailed",
 				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
+			goto exit;
 		}
 		prepareMessageRegistry(
 			retimerToUpdate, "TransferringToComponent",
@@ -233,6 +232,7 @@ int main(int argc, char *argv[])
 		if (dummyfd < 0) {
 			fprintf(stderr, "Error creating file: %s\n",
 				strerror(errno));
+			goto exit;
 		}
 
 		if (ftruncate(dummyfd, MAX_FW_IMAGE_SIZE) < 0) {
@@ -249,7 +249,6 @@ int main(int argc, char *argv[])
 			fprintf(stderr,
 				"FW read FW image copy to FPGA failed  error code%d!!!",
 				ret);
-			close(dummyfd);
 			goto exit;
 		}
 
@@ -267,11 +266,8 @@ int main(int argc, char *argv[])
 			fprintf(stderr,
 				"FW read FW image copy from FPGA failed  error code%d!!!",
 				ret);
-			close(dummyfd);
 			goto exit;
 		}
-		close(dummyfd);
-		dummyfd = -1;
 		break;
 
 	default:

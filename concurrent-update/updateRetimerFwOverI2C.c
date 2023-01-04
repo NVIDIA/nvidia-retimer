@@ -306,8 +306,7 @@ int maperrnoToI2CError(int errnoval, unsigned char slaveId, char **msg,
 			"ARB_LOST:ASPEED_I2CD_INTR_ARBIT_LOSS, slave address 0x%x",
 			slaveId);
 		*msg = buf;
-		sprintf(res,
-			"Retry the firmware update");
+		sprintf(res, "Retry the firmware update");
 		*resolution = res;
 		break;
 	case ETIMEDOUT:
@@ -412,6 +411,7 @@ int checkExtenedErrorReg()
 		fprintf(stderr,
 			"checkExDumpReg FPGA_WRITE failed write_buffer: 0x%x 0x%x \n",
 			write_buffer[0], write_buffer[1]);
+		close(exfd);
 		return -1;
 	}
 
@@ -553,7 +553,7 @@ int checkDigit_retimer(char *str)
  * RETURN: 0 if success
  ********************************************************************/
 
-int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
+int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 {
 	struct stat st;
 	unsigned char *fw_buf = NULL;
@@ -566,7 +566,7 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
 	if (fstat(fw_fd, &st)) {
 		fprintf(stderr, "\nfstat error: [%s]\n", strerror(errno));
 		close(fw_fd);
-		return -1;
+		return ret;
 	}
 	/* Check FW image size */
 	/* fw_size must be mutiple of BYTE_PER_PAGE */
@@ -734,7 +734,7 @@ int copyImageToFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
  * RETURN: 0 if success
  ********************************************************************/
 
-int copyImageFromFpga(unsigned int fw_fd, unsigned int fd, unsigned int slaveId)
+int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId)
 {
 	struct stat st;
 	unsigned char *fw_buf = NULL;
