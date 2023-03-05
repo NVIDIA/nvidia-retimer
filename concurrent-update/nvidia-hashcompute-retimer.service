@@ -1,0 +1,15 @@
+[Unit]
+Description=Nvidia Retimer HashCompute
+After=nvidia-fpga-ready.target
+Conflicts=nvidia-fpga-notready.target
+Wants=obmc-mapper.target
+After=obmc-mapper.target
+
+[Service]
+ExecStart=/usr/bin/dbus-service-retimer
+Restart=always
+Type=dbus
+BusName=com.Nvidia.RetimerHashCompute
+
+[Install]
+WantedBy=nvidia-fpga-ready.target

@@ -23,11 +23,17 @@ cdata.set_quoted(
 cdata.set('FPGA_I2C_CNTRL_ADDR',get_option('fpga_i2c_cntrl_addr'))
 cdata.set('MAX_FW_IMAGE_SIZE',get_option('fw_image_size'))
 
+cdata.set_quoted('DBUS_SERVICE_NAME', get_option('DBUS_SERVICE_NAME'))
+cdata.set('FPGA_I2C_BUS', get_option('FPGA_I2C_BUS'))
+
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')
 fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
+
+
+
 
 subdir('concurrent-update')
 subdir('inventory')

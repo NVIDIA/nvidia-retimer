@@ -789,8 +789,7 @@ int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId)
 		memcpy(fw_buf + (i * BYTE_PER_PAGE), &read_buffer[0],
 		       BYTE_PER_PAGE);
 	}
-	fprintf(stdout, "Image copy from FPGA completed 0x%x \n",
-		read_buffer[0]);
+	lseek(fw_fd, 0, 0);
 	ret = write(fw_fd, fw_buf, st.st_size);
 	if (ret < 0) {
 		fprintf(stderr, "ret:%d  unable to read FW file error %s \n",
@@ -799,8 +798,6 @@ int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId)
 		free(fw_buf);
 		return -ERROR_OPEN_FIRMWARE;
 	}
-
-	close(fw_fd);
 
 	free(fw_buf);
 	return 0;

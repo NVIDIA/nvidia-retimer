@@ -30,4 +30,12 @@ option('retimer_app_support',
        type: 'boolean',
        description: 'Retimer app to update retimer inventory properties.',
        value: false)
+option('DBUS_SERVICE_NAME',
+       type: 'string',
+       value: 'com.Nvidia.RetimerHashCompute',
+       description: 'Dbus service name for RetimerHashCompute')
+option('FPGA_I2C_BUS',
+       type: 'integer',
+       value: 3,
+       description: 'I2C bus number on which FPGA is connected to HMC.')
 

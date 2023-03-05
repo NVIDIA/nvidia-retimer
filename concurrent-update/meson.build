@@ -4,6 +4,11 @@ source_files = [
     'updateRetimerMain.c',
 ]
 
+source_files_dbus = [
+    'dbus-service-retimer.c',
+]
+
+
 lib_source_files = [
 	'updateRetimerFwOverI2C.cpp',
 	'dbus_log_event.c'
@@ -43,4 +48,29 @@ executable('updateRetimerFw',
             install: true,
             install_dir: get_option('bindir')
 )
+
+ssl = dependency('openssl')
+executable('dbus-service-retimer',
+            sources: source_files_dbus,
+            include_directories: retimer_inc,
+            dependencies:[
+              sdbusplus,
+              retimer_dep,
+              ssl
+            ],
+            install: true,
+            install_dir: get_option('bindir')
+)
+
+unit_files = [
+    'nvidia-hashcompute-retimer.service',
+]
+
+foreach unit : unit_files
+configure_file(input: unit,
+               output: unit,
+               copy: true,
+               install_dir: servicedir,
+               install: true)
+endforeach
 

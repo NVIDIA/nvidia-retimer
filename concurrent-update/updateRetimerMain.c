@@ -21,6 +21,8 @@
 #include <errno.h>
 #include <ctype.h>
 #include <time.h>
+#include <unistd.h> // for lseek()
+#include <fcntl.h>
 #include "updateRetimerFwOverI2C.h"
 
 extern uint8_t verbosity;
@@ -227,7 +229,7 @@ int main(int argc, char *argv[])
 
 		fprintf(stdout, "#10 Trigger Retimer Read ...%d\n",
 			retimerToRead);
-		dummyfd = open("Dummyfile", O_RDWR | O_APPEND | O_CREAT, 0644);
+		dummyfd = open("/tmp/Dummyfile", O_RDWR | O_CREAT, 0644);
 
 		if (dummyfd < 0) {
 			fprintf(stderr, "Error creating file: %s\n",
@@ -251,7 +253,6 @@ int main(int argc, char *argv[])
 				ret);
 			goto exit;
 		}
-
 		// Initiate FW READ to one of the retimer at a time and monitor the read progress and status
 		ret = readRetimerfw(fd, retimerToRead);
 		if (ret) {
@@ -260,7 +261,7 @@ int main(int argc, char *argv[])
 				retimerToRead);
 			goto exit;
 		}
-
+		lseek(dummyfd, 0, 0);
 		ret = copyImageFromFpga(dummyfd, fd, FPGA_I2C_CNTRL_ADDR);
 		if (ret) {
 			fprintf(stderr,
@@ -268,6 +269,8 @@ int main(int argc, char *argv[])
 				ret);
 			goto exit;
 		}
+		close(dummyfd);
+
 		break;
 
 	default:
