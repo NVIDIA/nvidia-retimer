@@ -206,7 +206,7 @@ static int method_computeHash(sd_bus_message *m,
 		return EXIT_FAILURE;
 	}
 
-	if (retimerId > MAX_RETIMERS) {
+	if (retimerId >= MAX_RETIMERS) {
 		fprintf(stderr, "Invalid retimer Id");
 		sd_bus_error_set_const(
 			ret_error, DBUS_ERR,
