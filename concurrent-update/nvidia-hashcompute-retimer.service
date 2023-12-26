@@ -7,6 +7,7 @@ After=obmc-mapper.target
 
 [Service]
 ExecStart=/usr/bin/dbus-service-retimer
+ExecStopPost=/bin/rm -f /tmp/hash/RetimerFW.dat
 Restart=always
 Type=dbus
 BusName=com.Nvidia.RetimerHashCompute
