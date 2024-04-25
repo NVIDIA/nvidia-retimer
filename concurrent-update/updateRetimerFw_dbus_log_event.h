@@ -23,5 +23,6 @@
 /* no return, we will call and fail silently if busctl isn't present */
 void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 		    char *resolution, bool genericMessage);
+void setErrorNamespace(char **errorNamespace);
 
 #endif
