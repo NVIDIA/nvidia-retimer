@@ -578,8 +578,7 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 		return ret;
 	}
 	/* Check FW image size */
-	/* fw_size must be mutiple of BYTE_PER_PAGE */
-	if ((st.st_size <= 0) || (st.st_size % BYTE_PER_PAGE)) {
+	if (st.st_size <= 0) {
 		fprintf(stderr, "\nNot a valid size: [%s]\n", strerror(errno));
 		close(fw_fd);
 		return -ERROR_WRONG_FIRMWARE;
@@ -610,17 +609,31 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 
 	pageCount = ((unsigned int)st.st_size / BYTE_PER_PAGE);
 	//Copy FW image to FPGA DP RAM 0x0_0000
-	//Write to DPRAM address to write_buffer0, write_buffer1, write_buffer 2 and then 256 bytes of payloadtill pageCount
-	for (uint32_t i = 0; i < pageCount; i++) {
+	//Write to DPRAM address to write_buffer0, write_buffer1, write_buffer 2 and then upto 256 bytes of payload till 
+	//the complete image is transferred
+	for (uint32_t i = 0; i <= pageCount; i++) {
+		size_t bytes_to_transfer = 0;
+		if (i < pageCount)
+		{
+			bytes_to_transfer = BYTE_PER_PAGE;
+		}
+		else
+		{
+			bytes_to_transfer = st.st_size - (pageCount * BYTE_PER_PAGE);
+		}
+		if (bytes_to_transfer <= 0)
+		{
+			break;
+		}
 		memset(write_buffer, 0x00, sizeof(write_buffer));
 		memset(read_buffer, 0x00, sizeof(read_buffer));
 		write_buffer[0] = (0x00 | (i & 0xFF00) >> 8);
 		write_buffer[1] = (0x00 | (i & 0x00FF));
 		write_buffer[2] = 0x00;
 		memcpy(&write_buffer[3], fw_buf + (i * BYTE_PER_PAGE),
-		       BYTE_PER_PAGE);
+		       bytes_to_transfer);
 		ret = send_i2c_cmd(fd, FPGA_WRITE, slaveId, write_buffer,
-				   read_buffer, BYTE_PER_PAGE + 3, 1);
+				   read_buffer, bytes_to_transfer + 3, 1);
 		if (ret) {
 			fprintf(stderr,
 				"FW update FPGA_WRITE failed write_buffer: 0x%x 0x%x 0x%x\n",
