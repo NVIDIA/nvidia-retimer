@@ -28,8 +28,7 @@ int main(void)
     for (size_t i = 0; i < numOfRetimers; i++)
     {
         // set SKU property
-        std::string switchPath = retimerSwitchesBasePath + std::to_string(i) +
-                                 retimerSwitchesPath + std::to_string(i);
+        const std::string& switchPath = retimerApp->getSwitchDBusObject(retimerSwitchesBasePath + std::to_string(i));
         std::string skuId = retimerApp->getSKUId(switchPath);
         if (!skuId.empty())
         {

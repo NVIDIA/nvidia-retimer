@@ -17,10 +17,27 @@
 
 #include "retimer_app.hpp"
 
+std::string RetimerApp::getService(const char* path,
+                                    const char* interface) const
+{
+    using DbusInterfaceList = std::vector<std::string>;
+    std::map<std::string, std::vector<std::string>> mapperResponse;
+
+    auto mapper = bus.new_method_call(mapperService, mapperPath,
+                                      mapperInterface, "GetObject");
+    mapper.append(path, DbusInterfaceList({interface}));
+
+    auto mapperResponseMsg = bus.call(mapper);
+    mapperResponseMsg.read(mapperResponse);
+    return mapperResponse.begin()->first;
+}
+
+
 void RetimerApp::getDBusProperty(const DBusMapping &dbusMap,
                                  std::string &value)
 {
-    auto method = bus.new_method_call(gpuMgrService, dbusMap.objectPath.c_str(),
+    const auto& service = getService(dbusMap.objectPath.c_str(), dbusMap.interface.c_str());
+    auto method = bus.new_method_call(service.c_str(), dbusMap.objectPath.c_str(),
                                         dbusProperties, "Get");
     method.append(dbusMap.interface.c_str(), dbusMap.propertyName.c_str());
     auto reply = bus.call(method);
@@ -32,12 +49,35 @@ void RetimerApp::getDBusProperty(const DBusMapping &dbusMap,
 void RetimerApp::setDBusProperty(const DBusMapping &dbusMap,
                                  const std::string &value)
 {
-    auto method = bus.new_method_call(gpuMgrService, dbusMap.objectPath.c_str(),
+    const auto& service = getService(dbusMap.objectPath.c_str(), dbusMap.interface.c_str());
+    auto method = bus.new_method_call(service.c_str(), dbusMap.objectPath.c_str(),
                                         dbusProperties, "Set");
     PropertyValue propertyValue = value;
     method.append(dbusMap.interface.c_str(), dbusMap.propertyName.c_str(),
                     propertyValue);
     bus.call_noreply(method);
+}
+
+std::string RetimerApp::getSwitchDBusObject(const std::string& rootPath)
+{
+    std::vector<std::string> paths;
+
+
+    auto mapper = bus.new_method_call(mapperService, mapperPath,
+                                      mapperInterface, "GetSubTreePaths");
+    mapper.append(rootPath.c_str());
+    mapper.append(0); // Depth 0 to search all
+    mapper.append(std::vector<std::string>({switchInterface}));
+    auto reply = bus.call(mapper);
+
+    reply.read(paths);
+
+    if (paths.empty())
+    {
+        return {};
+    }
+    return paths.at(0);
+
 }
 
 std::string RetimerApp::getSKUId(const std::string &objPath)

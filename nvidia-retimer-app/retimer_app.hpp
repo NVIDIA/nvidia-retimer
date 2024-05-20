@@ -41,11 +41,14 @@ const std::string retimerInventoryPath =
 const std::string retimerFWInventoryBasePath = "/xyz/openbmc_project/software/";
 const std::string retimerFWInventoryPath =
     retimerFWInventoryBasePath + "HGX_FW_PCIeRetimer_";
-constexpr auto gpuMgrService = "xyz.openbmc_project.GpuMgr";
 constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
 constexpr auto switchInterface = "xyz.openbmc_project.Inventory.Item.Switch";
 constexpr auto assetInterface = "xyz.openbmc_project.Inventory.Decorator.Asset";
 constexpr auto versionInterface = "xyz.openbmc_project.Software.Version";
+constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
+constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
+
 
 using PropertyValue = std::variant<std::string>;
 using Interface = std::string;
@@ -65,6 +68,23 @@ public:
      * @param[in] bus
      */
     RetimerApp(sdbusplus::bus::bus &bus) : bus(bus) {}
+
+    /**
+     * @brief Get D-Bus service
+     *
+     * @param[in] path
+     * @param[in] interface
+     */
+    std::string getService(const char* path,
+                                    const char* interface) const;
+
+    /**
+     * @brief Get the Retimer Switch D-Bus object
+     *
+     * @param[in] rootPath
+     */
+    std::string getSwitchDBusObject(const std::string& rootPath);
+
     /**
      * @brief Get property from D-Bus object
      *
