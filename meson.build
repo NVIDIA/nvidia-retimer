@@ -26,6 +26,8 @@ cdata.set('MAX_FW_IMAGE_SIZE',get_option('fw_image_size'))
 cdata.set_quoted('DBUS_SERVICE_NAME', get_option('DBUS_SERVICE_NAME'))
 cdata.set('FPGA_I2C_BUS', get_option('FPGA_I2C_BUS'))
 
+cdata.set('PLATFORM_TYPE', get_option('PLATFORM_TYPE'))
+
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')
 fmt = dependency('fmt')

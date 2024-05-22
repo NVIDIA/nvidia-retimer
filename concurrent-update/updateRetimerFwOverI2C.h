@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include "config.h"
 #include "updateRetimerFw_dbus_log_event.h"
 #include <stddef.h>
@@ -149,6 +150,17 @@ enum { ERROR_INPUT_ARGUMENTS = 100,
        ERROR_UPG_CRC_RETIMER6 = 0x406,
        ERROR_UPG_CRC_RETIMER7 = 0x407,
        ERROR_UPG_CRC_RETIMER_ALL = 0x408,
+       // COMPOSITE IMAGE PARSING-SPECIFIC ERRORS
+       ERROR_COMPOSITE_IMAGE_HEADER_CORRUPT = 0x500,
+       ERROR_COMPOSITE_IMAGE_TRUNCATED = 0x501,
+       ERROR_COMPOSITE_IMAGE_TOO_MANY_COMPS = 0x502,
+       ERROR_COMPOSITE_IMAGE_TOO_SHORT_FOR_HEADERS = 0x503,
+       ERROR_COMPOSITE_UNSUPPORTED_VERSION = 0x504,
+       ERROR_COMPOSITE_RT_TARGETED_MULTIPLE_TIMES = 0x505,
+       ERROR_COMPOSITE_IMAGE_DATA_OUT_OF_BOUNDS = 0x506,
+       ERROR_COMPOSITE_UNSUPPORTED_PLATFORM_TYPE = 0x507,
+       ERROR_COMPOSITE_TARGETED_INDEX_OUT_OF_RANGE = 0x508,
+
        ERROR_UNKNOWN = 0xff,
 };
 
@@ -201,8 +213,49 @@ typedef struct pair {
 	char *errorString;
 } ErrorCodeMapTable;
 
+typedef struct __attribute__((packed))
+{
+	uint8_t uuid[16];        // static UUID 8c28d77a-9707-43d7-bc13-c12b3abb4b87, big endian
+	uint8_t majorVersion;    // 1
+	uint8_t reserved0;
+	uint8_t componentCount;
+	uint8_t platformType;
+	uint32_t fileLength;
+	uint32_t sku;            // APSKU, VendorId/DeviceId (informational only, do not enforce)
+	uint32_t reserved2[2];
+	uint32_t headerCrc;      // CRC32
+} CompositeImageHeader;
+static_assert(sizeof(CompositeImageHeader) == 40, "sizeof(CompositeImageHeader) != 40");
+
+extern const uint8_t CompositeImageHeaderUuid[16];
+
+typedef struct __attribute__((packed))
+{
+	uint8_t magic[4];           // RTIH
+	uint32_t imageLength;
+	uint32_t applyBitmap;       // Up to 16 devices for future expansion. Max retimer number (bitmap) is uint8_t in concurrent-updater, but allow for future growth
+	char versionString[36];     // null-terminated string
+	uint32_t reserved[2];
+	uint32_t imageCrc;          // CRC32 of the corresponding image section
+	uint32_t componentHeaderCrc;// CRC32 of the header, including imageCrc
+} ComponentHeader;
+static_assert(sizeof(ComponentHeader) == 64, "sizeof(ComponentHeader) != 64");
+
+extern const uint8_t ComponentHeaderMagic[4];
+
+typedef struct
+{
+	size_t startOffset;
+	size_t imageLength;
+	uint32_t applyBitmap;
+	uint32_t imageCrc;
+	char versionString[36];  // same length as in the ComponentHeader
+} update_operation;
+static_assert(sizeof(((update_operation *)NULL)->versionString) ==
+	sizeof(((ComponentHeader *)NULL)->versionString));
+
 void debug_print(char *fmt, ...);
-void prepareMessageRegistry(uint8_t retimer, char *message,
+void prepareMessageRegistry(uint8_t retimer, char *message, char *versionStr,
 			    bool verBeforeDevice, char *severity,
 			    char *resolution, bool genericMessage);
 unsigned int crc32(const unsigned char *buf, int length);
@@ -218,11 +271,15 @@ int checkDigit_i2c(char *str);
 int checkDigit_retimer(char *str);
 int parseStr(const char *in, int startid, int endid, char *op);
 int readFwVersion(char *str, char **ver);
-int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId);
+int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
+	const char *pldmVersionStr, update_operation **update_ops, int *update_ops_count);
+int copyImageFromFileToFpga(int fw_fd, int fd, unsigned int slaveId);
+int copyImageFromMemToFpga(const unsigned char *fw_addr, size_t fw_size,
+              unsigned int fw_crc32, int fd, unsigned int slaveId);
 int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId);
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
-int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
+int startRetimerFwUpdate(int fd, uint8_t retimerNumber, char *versionStr,
 			 uint8_t *retimerNotUpdated);
 int readRetimerfw(int fd, uint8_t retimerNumber);

@@ -31,7 +31,6 @@
 #include <systemd/sd-bus.h>
 #include "updateRetimerFwOverI2C.h"
 
-char *versionStr = NULL;
 const uint8_t mask_retimer[] = { RETIMER0, RETIMER1, RETIMER2,
 				 RETIMER3, RETIMER4, RETIMER5,
 				 RETIMER6, RETIMER7, RETIMERALL };
@@ -62,6 +61,9 @@ ErrorCodeMapTable table[] = {
 
 volatile extendedErrorCode *dumpExtendedI2CReg = NULL;
 
+const uint8_t CompositeImageHeaderUuid[16] = {0x8c, 0x28, 0xd7, 0x7a, 0x97, 0x07, 0x43, 0xd7, 0xbc, 0x13, 0xc1, 0x2b, 0x3a, 0xbb, 0x4b, 0x87};
+const uint8_t ComponentHeaderMagic[4] = {(uint8_t) 'R', (uint8_t) 'I', (uint8_t) 'T', (uint8_t) 'H'};
+
 void debug_print(char *fmt, ...)
 {
 	if (verbosity) {
@@ -83,7 +85,7 @@ void debug_print(char *fmt, ...)
  *
  * RETURN: void 
  **********************************************************************/
-void prepareMessageRegistry(uint8_t retimer, char *message,
+void prepareMessageRegistry(uint8_t retimer, char *message, char *versionStr,
 			    bool VerBeforeDevice, char *severity,
 			    char *resolution, bool genericMessage)
 {
@@ -520,6 +522,301 @@ int checkDigit_i2c(char *str)
 	}
 }
 
+/******************************************************
+ * parseCompositeImage()
+ *
+ * Parse a composite image header block and create an array of update_operation
+ *
+ * imageMappedAddr: pointer to start of FW image
+ * fw_size: length of firmware image
+ * pldmVersionStr: Retimer version string from the PLDM package
+ * update_ops: outgoing, pointer to update_ops array (needs to be freed)
+ * update_ops_count: outgoing, number of elements in update_ops array
+ *
+ *
+ * RETURN: 0 if success
+ *****************************************************/
+int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
+	const char *pldmVersionStr, update_operation **update_ops, int *update_ops_count)
+{
+	int ret = 0;
+	char msg[MAX_NAME_SIZE] = { 0 };
+	const CompositeImageHeader *compositeImageHeader = NULL;
+	const ComponentHeader *componentHeaders = NULL;
+	size_t nextImageOffset = 0;
+	uint32_t coveredRetimerBitmap = 0;
+	*update_ops = NULL;
+	*update_ops_count = 0;
+	// Check minimum length. If less than minimum length treat as bare image
+	// Check CompositeImageHeader
+	compositeImageHeader = (CompositeImageHeader *)imageMappedAddr;
+	if (fw_size < sizeof(CompositeImageHeader) ||
+		memcmp(&compositeImageHeader->uuid, &CompositeImageHeaderUuid,
+			sizeof(CompositeImageHeaderUuid))) {
+		fprintf(stderr, "retimer firmware is a bare image (does not match header)\n");
+		*update_ops = calloc(1, sizeof(update_operation));
+		if (!*update_ops) {
+			ret = -ERROR_MALLOC_FAILURE;
+			strncpy(msg, "Failed to allocate memory for update_ops!", sizeof(msg) - 1);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Retry firmware update");
+			goto exit;
+		}
+		*update_ops_count = 1;
+		(*update_ops)[0].startOffset = 0;
+		(*update_ops)[0].imageLength = fw_size;
+		(*update_ops)[0].applyBitmap = RETIMERALL;
+		(*update_ops)[0].imageCrc = crc32(imageMappedAddr, fw_size);
+		strncpy((*update_ops)[0].versionString, pldmVersionStr,
+			sizeof((*update_ops)[0].versionString) - 1);
+	} else {
+		fprintf(stderr, "retimer firmware is a composite image\n");
+
+		// verify the CompositeImageHeader CRC
+		if (crc32((const unsigned char *)compositeImageHeader,
+				sizeof(*compositeImageHeader) - sizeof(compositeImageHeader->headerCrc))
+				!= compositeImageHeader->headerCrc) {
+			ret = -ERROR_WRONG_CRC32_CHKSM;
+			strncpy(msg, "CompositeImageHeader.headerCrc mismatch", sizeof(msg) - 1);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// verify the CompositeImageHeader version
+		if (compositeImageHeader->majorVersion != 1) {
+			ret = -ERROR_COMPOSITE_UNSUPPORTED_VERSION;
+			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: unrecognized version %hhu",
+				compositeImageHeader->majorVersion);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// verify the CompositeImageHeader platformType
+		if (compositeImageHeader->platformType != PLATFORM_TYPE) {
+			ret = -ERROR_COMPOSITE_UNSUPPORTED_PLATFORM_TYPE;
+			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: incorrect platformType %hhu",
+				compositeImageHeader->platformType);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// verify the component count
+		if (compositeImageHeader->componentCount > RETIMER_MAX_NUM) {
+			ret = -ERROR_COMPOSITE_IMAGE_TOO_MANY_COMPS;
+			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: too many components %hhu",
+				compositeImageHeader->componentCount);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// verify the file length matches
+		if (compositeImageHeader->fileLength != fw_size) {
+			ret = -ERROR_COMPOSITE_IMAGE_TRUNCATED;
+			snprintf(msg, sizeof(msg) - 1,
+				"CompositeImageHeader: file length %zu does not match header %zu",
+				fw_size, (size_t)compositeImageHeader->fileLength);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// print the SKU but do not verify
+		fprintf(stdout, "CompositeImageHeader: composite image SKU is %#x\n",
+			compositeImageHeader->sku);
+
+		// Verify the file is long enough to contain all ComponentHeaders
+		nextImageOffset = sizeof(*compositeImageHeader) +
+			compositeImageHeader->componentCount * sizeof(ComponentHeader);
+		if (fw_size < nextImageOffset) {
+			ret = -ERROR_COMPOSITE_IMAGE_TOO_SHORT_FOR_HEADERS;
+			strncpy(msg, "File is too short for all ComponentHeaders", sizeof(msg) - 1);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		if (compositeImageHeader->componentCount == 0) {
+			fprintf(stderr, "componentCount is 0, nothing to do\n");
+			goto exit;
+		}
+
+		// The first ComponentHeader starts immediately after the CompositeImageHeader
+		componentHeaders = (ComponentHeader *)
+			(imageMappedAddr + sizeof(CompositeImageHeader));
+
+		*update_ops = calloc(compositeImageHeader->componentCount,
+			sizeof(update_operation));
+		if (!*update_ops) {
+			ret = -ERROR_MALLOC_FAILURE;
+			strncpy(msg, "Failed to allocate memory for update_ops!", sizeof(msg) - 1);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Retry firmware update");
+			goto exit;
+		}
+		*update_ops_count = compositeImageHeader->componentCount;
+
+		// Verify each ComponentHeader and fill in update_operation struct
+		for (int comp = 0; comp < compositeImageHeader->componentCount; comp++) {
+			fprintf(stdout, "verifying ComponentHeader %d\n", comp);
+			// Verify ComponentHeader.magic
+			if (!memcmp(&componentHeaders[comp], ComponentHeaderMagic,
+				sizeof(ComponentHeaderMagic))) {
+				ret = -ERROR_COMPOSITE_IMAGE_HEADER_CORRUPT;
+				strncpy(msg, "ComponentHeader is invalid", sizeof(msg) - 1);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+
+			// Verify the ComponentHeader CRC
+			if (crc32((const unsigned char *)&componentHeaders[comp],
+				sizeof(componentHeaders[comp]) - sizeof(
+					componentHeaders[comp].componentHeaderCrc))
+				!= componentHeaders[comp].componentHeaderCrc) {
+				ret = -ERROR_WRONG_CRC32_CHKSM;
+				snprintf(msg, sizeof(msg) - 1,
+					"ComponentHeader %d componentHeaderCrc mismatch",
+					comp);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+
+			// fill in the startOffset and imageLength fields of update_operation
+			// verify that image start and end are in bounds and no overflow
+			if (nextImageOffset > fw_size ||
+				nextImageOffset + componentHeaders[comp].imageLength > fw_size ||
+				nextImageOffset + componentHeaders[comp].imageLength < nextImageOffset) {
+				ret = -ERROR_COMPOSITE_IMAGE_DATA_OUT_OF_BOUNDS;
+				strncpy(msg, "Image data out of bounds", sizeof(msg) - 1);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+			(*update_ops)[comp].startOffset = nextImageOffset;
+			(*update_ops)[comp].imageLength = componentHeaders[comp].imageLength;
+			nextImageOffset += componentHeaders[comp].imageLength;
+
+			// make sure no retimer is targeted by more than one component
+			// check for retimers previously covered AND in this component
+			if (coveredRetimerBitmap & componentHeaders[comp].applyBitmap) {
+				ret = -ERROR_COMPOSITE_RT_TARGETED_MULTIPLE_TIMES;
+				strncpy(msg, "retimer already updated by previous component",
+					sizeof(msg) - 1);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+			coveredRetimerBitmap |= componentHeaders[comp].applyBitmap;
+			(*update_ops)[comp].applyBitmap = componentHeaders[comp].applyBitmap;
+			strncpy((*update_ops)[comp].versionString,
+				componentHeaders[comp].versionString,
+				sizeof((*update_ops)[comp].versionString) - 1);
+		}
+
+		// raise an error if any retimers that do not exist on this platform
+		// are targeted.
+		if (coveredRetimerBitmap > RETIMERALL) {
+			ret = -ERROR_COMPOSITE_TARGETED_INDEX_OUT_OF_RANGE;
+			snprintf(msg, sizeof(msg) - 1, "Targeting a retimer that " \
+				"does not exist on this platform, bitmap %#x", coveredRetimerBitmap);
+			fprintf(stderr, "%s\n", msg);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_PCIeRetimer Update Service", msg,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Contact NVIDIA support.");
+			goto exit;
+		}
+
+		// verify that all retimers on this platform were targeted (nonfatal)
+		if (coveredRetimerBitmap != RETIMERALL) {
+			fprintf(stderr, "[WARN] Not all retimers targeted! Only targeted %#x\n",
+				coveredRetimerBitmap);
+		}
+
+		// Now file size is known OK, so we can safely read image data
+		for (int comp = 0; comp < compositeImageHeader->componentCount; comp++) {
+			// Verify the image data CRC
+			if (crc32(imageMappedAddr + (*update_ops)[comp].startOffset,
+				(*update_ops)[comp].imageLength) != componentHeaders[comp].imageCrc) {
+				ret = -ERROR_WRONG_CRC32_CHKSM;
+				snprintf(msg, sizeof(msg) - 1, "Image %d CRC mismatch", comp);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+			(*update_ops)[comp].imageCrc = componentHeaders[comp].imageCrc;
+		}
+	}
+	return 0;
+exit:
+	if (ret) {
+		if (*update_ops) {
+			free(*update_ops);
+			*update_ops = NULL;
+		}
+		*update_ops_count = 0;
+	}
+	return ret;
+}
+
 /*****************************************************
  * checkDigit_retimer()
  *
@@ -549,7 +846,7 @@ int checkDigit_retimer(char *str)
 }
 
 /********************************************************************
- * copyImageToFpga()
+ * copyImageFromFileToFpga()
  *
  * Load FW image file
  * Calculate CRC32 and update CRC32 value in FPGA control register
@@ -562,35 +859,35 @@ int checkDigit_retimer(char *str)
  * RETURN: 0 if success
  ********************************************************************/
 
-int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
+int copyImageFromFileToFpga(int fw_fd, int fd, unsigned int slaveId)
 {
 	struct stat st;
+	off_t fw_size = 0;
 	unsigned char *fw_buf = NULL;
-	unsigned int fw_crc32 = 0;
 	int ret = -1;
-	unsigned char write_buffer[WRITE_BUF_SIZE] = { 0 };
-	unsigned char read_buffer[READ_BUF_SIZE] = { 0 };
-	unsigned int pageCount = 0;
+	unsigned int fw_crc32 = 0;
 
 	if (fstat(fw_fd, &st)) {
 		fprintf(stderr, "\nfstat error: [%s]\n", strerror(errno));
 		close(fw_fd);
 		return ret;
 	}
+	fw_size = st.st_size;
 	/* Check FW image size */
-	if (st.st_size <= 0) {
+	/* fw_size must be mutiple of BYTE_PER_PAGE */
+	if ((fw_size <= 0) || (fw_size > MAX_FW_IMAGE_SIZE)) {
 		fprintf(stderr, "\nNot a valid size: [%s]\n", strerror(errno));
 		close(fw_fd);
 		return -ERROR_WRONG_FIRMWARE;
 	}
 
-	fw_buf = (unsigned char *)malloc(st.st_size);
+	fw_buf = (unsigned char *)malloc(fw_size);
 
 	if (fw_buf == NULL) {
 		return -ERROR_MALLOC_FAILURE;
 	}
 
-	ret = read(fw_fd, fw_buf, st.st_size);
+	ret = read(fw_fd, fw_buf, fw_size);
 	if (ret < 0) {
 		fprintf(stderr, "ret:%d  unable to read FW file error %s \n",
 			ret, strerror(errno));
@@ -598,16 +895,48 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 		free(fw_buf);
 		return -ERROR_OPEN_FIRMWARE;
 	}
-
 	// calculate CRC32
-	fw_crc32 = crc32(fw_buf, st.st_size);
+	fw_crc32 = crc32(fw_buf, fw_size);
+
+	ret = copyImageFromMemToFpga(fw_buf, fw_size, fw_crc32, fd, slaveId);
+	free(fw_buf);
+	return ret;
+}
+
+/********************************************************************
+ * copyImageFromMemToFpga()
+ *
+ * Load FW from memory buffer
+ * Calculate CRC32 and update CRC32 value in FPGA control register
+ * Copy FW image from memory to DPRAM
+ *
+ * fw_addr: address in memory of retimer FW
+ * fd: file describe
+ * slaveId: FPGA I2C controller slave id
+ *
+ * RETURN: 0 if success
+ ********************************************************************/
+
+int copyImageFromMemToFpga(const unsigned char *fw_addr, size_t fw_size,
+	unsigned int fw_crc32, int fd, unsigned int slaveId)
+{
+	int ret = -1;
+	unsigned char write_buffer[WRITE_BUF_SIZE] = { 0 };
+	unsigned char read_buffer[READ_BUF_SIZE] = { 0 };
+	unsigned int pageCount = 0;
+
+	// because size_t is unsigned, fw_size <= 0 check doesn't make sense
+	if ((fw_size > MAX_FW_IMAGE_SIZE) || (fw_size % BYTE_PER_PAGE)) {
+		fprintf(stderr, "\nNot a valid size: [%zu]\n", fw_size);
+		return -ERROR_WRONG_FIRMWARE;
+	}
 
 	// 5. Copy FW image to FPGA DP RAM 0x0_0000
 	fprintf(stdout, "Initiate Copy to FPGA RAM...\n");
 	fprintf(stdout, "RETIMER FW Image size: 0x%lx \n",
-		(long int)st.st_size);
+		(long int)fw_size);
 
-	pageCount = ((unsigned int)st.st_size / BYTE_PER_PAGE);
+	pageCount = ((unsigned int)fw_size / BYTE_PER_PAGE);
 	//Copy FW image to FPGA DP RAM 0x0_0000
 	//Write to DPRAM address to write_buffer0, write_buffer1, write_buffer 2 and then upto 256 bytes of payload till 
 	//the complete image is transferred
@@ -619,7 +948,7 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 		}
 		else
 		{
-			bytes_to_transfer = st.st_size - (pageCount * BYTE_PER_PAGE);
+			bytes_to_transfer = fw_size - (pageCount * BYTE_PER_PAGE);
 		}
 		if (bytes_to_transfer <= 0)
 		{
@@ -630,7 +959,7 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 		write_buffer[0] = (0x00 | (i & 0xFF00) >> 8);
 		write_buffer[1] = (0x00 | (i & 0x00FF));
 		write_buffer[2] = 0x00;
-		memcpy(&write_buffer[3], fw_buf + (i * BYTE_PER_PAGE),
+		memcpy(&write_buffer[3], fw_addr + (i * BYTE_PER_PAGE),
 		       bytes_to_transfer);
 		ret = send_i2c_cmd(fd, FPGA_WRITE, slaveId, write_buffer,
 				   read_buffer, bytes_to_transfer + 3, 1);
@@ -639,12 +968,10 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 				"FW update FPGA_WRITE failed write_buffer: 0x%x 0x%x 0x%x\n",
 				write_buffer[0], write_buffer[1],
 				write_buffer[2]);
-			free(fw_buf);
 			return ret;
 		}
 	}
 	fprintf(stdout, "Image copy to FPGA completed 0x%x \n", read_buffer[0]);
-	free(fw_buf);
 
 	// 6. Copy Image size to 0x04_0000
 	fprintf(stdout, " Copy Image size...\n");
@@ -656,14 +983,14 @@ int copyImageToFpga(int fw_fd, int fd, unsigned int slaveId)
 	write_buffer[2] = ((FPGA_IMG_SIZE_REG & BYTE0) >> 0); //0x00;
 
 	//payload -> wdata1(LSB) -> wdata2 -> wdata3 -> wdata4 (MSB)
-	write_buffer[3] = ((st.st_size & BYTE0) >> 0);
-	write_buffer[4] = ((st.st_size & BYTE1) >> 8);
-	write_buffer[5] = ((st.st_size & BYTE2) >> 16);
-	write_buffer[6] = ((st.st_size & BYTE3) >> 24);
+	write_buffer[3] = ((fw_size & BYTE0) >> 0);
+	write_buffer[4] = ((fw_size & BYTE1) >> 8);
+	write_buffer[5] = ((fw_size & BYTE2) >> 16);
+	write_buffer[6] = ((fw_size & BYTE3) >> 24);
 
 	for (int index = 3; index < 7; index++) {
 		debug_print("# Retimer %d 0x%lx write_buffer: 0x%x\n", index,
-			    (long int)st.st_size, write_buffer[index]);
+			    (long int)fw_size, write_buffer[index]);
 	}
 
 	ret = send_i2c_cmd(fd, FPGA_WRITE, slaveId, write_buffer, 0, 7, 0);
@@ -978,10 +1305,11 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
  *
  * fd: file descriptor
  * retimerNumber: update retimer 0-7 or all
+ * versionStr: versions string of the retimer FW (for log messages)
  *
  * RETURN: 0 if success
  ********************************************************************/
-int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
+int startRetimerFwUpdate(int fd, uint8_t retimerNumber, char *versionStr,
 			 uint8_t *retimerNotupdated)
 {
 	unsigned char write_buffer[WRITE_BUF_SIZE] = { 0 };
@@ -1080,7 +1408,7 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
-					retryUpdate4Retimer, "TransferFailed",
+					retryUpdate4Retimer, "TransferFailed", versionStr,
 					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					"Reach out to the NVIDIA support team for further action",
@@ -1092,8 +1420,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
 					retryUpdate4Retimer,
-					"VerificationFailed",
-					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"VerificationFailed", versionStr,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					"Reach out to the NVIDIA support team for further action",
 					0);
@@ -1105,8 +1433,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
 					retryUpdate4Retimer,
-					"VerificationFailed",
-					MSG_REG_DEV_FOLLOWED_BY_VER,
+					"VerificationFailed", versionStr,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					"Reach out to the NVIDIA support team for further action",
 					0);

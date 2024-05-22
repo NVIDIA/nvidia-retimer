@@ -38,4 +38,8 @@ option('FPGA_I2C_BUS',
        type: 'integer',
        value: 3,
        description: 'I2C bus number on which FPGA is connected to HMC.')
+option('PLATFORM_TYPE',
+       type: 'integer',
+       value: 0,
+       description: 'Platform type for composite retimer firmware images.')
 

@@ -20,7 +20,9 @@
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
@@ -36,9 +38,9 @@
 
 extern uint8_t verbosity;
 extern const uint8_t mask_retimer[];
-extern char *versionStr;
 extern char *arrRetimer[];
 extern uint8_t retimerNum;
+
 /************************************************
  * show_usage()
  *
@@ -80,9 +82,18 @@ int main(int argc, char *argv[])
 	uint8_t retimerNotUpdated = INIT_UINT8;
 	uint8_t retimerToRead = INIT_UINT8;
 	uint8_t command = INIT_UINT8;
+	char *versionStr = NULL;
 	uint32_t imageFilenameSize = 0;
 	int imagefd = -1;
 	int dummyfd = -1;
+	struct stat st = { 0 };
+	size_t fw_size = 0;
+	const unsigned char *imageMappedAddr = NULL;
+	update_operation *update_ops = NULL;
+	int update_ops_count = -1;
+
+	// set stdout to line-buffered so it interleaves correctly with stderr
+	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	// Check input argument number
 	if (argc < 5) {
@@ -154,84 +165,158 @@ int main(int argc, char *argv[])
 			imageFilename, versionStr);
 		fprintf(stdout, "Retimer under update ...%d \n", retimerNum);
 
-		prepareMessageRegistry(
-			retimerToUpdate, "TargetDetermined",
-			MSG_REG_DEV_FOLLOWED_BY_VER,
-			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL, 0);
-
 		imagefd = open(imageFilename, O_RDONLY);
 
 		if (imagefd < 0) {
 			fprintf(stderr, "Error opening file: %s\n",
 				strerror(errno));
 			prepareMessageRegistry(
-				retimerToUpdate, "VerificationFailed",
-				MSG_REG_DEV_FOLLOWED_BY_VER,
-				"xyz.openbmc_project.Logging.Entry.Level.Critical",
-				NULL, 0);
-			goto exit;
-		}
-		prepareMessageRegistry(
-			retimerToUpdate, "TransferringToComponent",
-			MSG_REG_VER_FOLLOWED_BY_DEV,
-			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL, 0);
-
-		ret = copyImageToFpga(imagefd, fd, FPGA_I2C_CNTRL_ADDR);
-		if (ret) {
-			fprintf(stderr,
-				"FW Update FW image copy to FPGA failed  error code%d!!!",
-				ret);
-			prepareMessageRegistry(
-				retimerToUpdate, "TransferFailed",
+				retimerToUpdate, "VerificationFailed", versionStr,
 				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
 			goto exit;
 		}
 
-		// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
-		ret = startRetimerFwUpdate(fd, retimerToUpdate,
-					   &retimerNotUpdated);
-		if (ret) {
-			fprintf(stderr,
-				"FW Update for Retimer failed for retimer with error code%d retimerNotUpdated %d!!!",
-				ret, retimerNotUpdated);
+		if (fstat(imagefd, &st)) {
+			fprintf(stderr, "\nfstat error: [%s]\n", strerror(errno));
 			prepareMessageRegistry(
-				retimerNotUpdated, "ApplyFailed",
+				retimerToUpdate, "TransferFailed", versionStr,
 				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
+			goto exit;
+		}
+		fw_size = st.st_size;
+		imageMappedAddr = mmap(NULL, fw_size, PROT_READ, MAP_PRIVATE, imagefd, 0);
+		if (imageMappedAddr == MAP_FAILED) {
+			perror("Memory-mapping of FW image for processing failed");
+			prepareMessageRegistry(
+				retimerToUpdate, "TransferFailed", versionStr,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL, 0);
+			goto exit;
+		}
 
-			if (retimerToUpdate ^ retimerNotUpdated) {
+		close(imagefd);
+		imagefd = -1;
+
+		ret = parseCompositeImage(imageMappedAddr, fw_size, versionStr,
+			&update_ops, &update_ops_count);
+		if (ret) {
+			fprintf(stderr, "parseCompositeImage returned: [%d]\n", ret);
+			prepareMessageRegistry(
+				retimerToUpdate, "VerificationFailed", versionStr,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL, 0);
+			goto exit;
+		}
+		// if update_ops_count <= 0, we will not enter update loop below
+		// and retimer update will exit successfully. Only need to check
+		// if update_ops_count > 0 and we did not get the array.
+		if (update_ops_count > 0 && !update_ops) {
+			ret = -ERROR_UNKNOWN;
+			fprintf(stderr, "update_ops_count is %d but update_ops is NULL\n",
+				update_ops_count);
+			prepareMessageRegistry(
+				retimerToUpdate, "VerificationFailed", versionStr,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				NULL, 0);
+			goto exit;
+		}
+
+		// Composite and bare images reconverge here with update_operations filled in
+		// Perform target filtering intersection and log TargetDetermined logs
+		for (int uo = 0; uo < update_ops_count; uo++) {
+			fprintf(stdout, "update operation %d, startOffset %#zx, " \
+				"imageLength %zu, applyBitmap %#x, actual bitmap %#x, " \
+				"imageCrc %#x, versionString %s\n",
+				uo, update_ops[uo].startOffset, update_ops[uo].imageLength,
+				update_ops[uo].applyBitmap,
+				update_ops[uo].applyBitmap & retimerToUpdate,
+				update_ops[uo].imageCrc,
+				update_ops[uo].versionString);
+			update_ops[uo].applyBitmap &= retimerToUpdate;
+			prepareMessageRegistry(
+				update_ops[uo].applyBitmap, "TargetDetermined",
+				update_ops[uo].versionString, MSG_REG_DEV_FOLLOWED_BY_VER,
+				"xyz.openbmc_project.Logging.Entry.Level.Informational",
+				NULL, 0);
+		}
+
+		for (int uo = 0; uo < update_ops_count; uo++) {
+			fprintf(stderr, "performing update_ops[%d]\n", uo);
+			if (!update_ops[uo].applyBitmap) {
+				fprintf(stdout, "applyBitmap for update_ops[%d] is 0, skipping\n", uo);
+				continue;
+			}
+			prepareMessageRegistry(
+				update_ops[uo].applyBitmap, "TransferringToComponent",
+				update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Informational",
+				NULL, 0);
+
+			ret = copyImageFromMemToFpga(imageMappedAddr + update_ops[uo].startOffset,
+				update_ops[uo].imageLength, update_ops[uo].imageCrc, fd,
+				FPGA_I2C_CNTRL_ADDR);
+			if (ret) {
+				fprintf(stderr,
+					"FW Update FW image copy to FPGA failed  error code%d!!!\n",
+					ret);
 				prepareMessageRegistry(
-					(retimerToUpdate ^ retimerNotUpdated),
-					"UpdateSuccessful",
-					MSG_REG_DEV_FOLLOWED_BY_VER,
-					"xyz.openbmc_project.Logging.Entry.Level.Informational",
+					update_ops[uo].applyBitmap, "TransferFailed",
+					update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					NULL, 0);
+				goto exit;
+			}
+
+			// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
+			ret = startRetimerFwUpdate(fd, update_ops[uo].applyBitmap,
+						update_ops[uo].versionString, &retimerNotUpdated);
+			if (ret) {
+				fprintf(stderr,
+					"FW Update for Retimer %d failed for retimer with error code " \
+					"%d retimerNotUpdated %d!!!\n",
+					update_ops[uo].applyBitmap, ret, retimerNotUpdated);
+				prepareMessageRegistry(
+					retimerNotUpdated, "ApplyFailed", update_ops[uo].versionString,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
 
-				prepareMessageRegistry(
-					(retimerToUpdate ^ retimerNotUpdated),
-					"AwaitToActivate",
-					MSG_REG_VER_FOLLOWED_BY_DEV,
-					"xyz.openbmc_project.Logging.Entry.Level.Informational",
-					"AC power cycle", 0);
-			}
-			goto exit;
-		}
-		prepareMessageRegistry(
-			retimerToUpdate, "UpdateSuccessful",
-			MSG_REG_DEV_FOLLOWED_BY_VER,
-			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			NULL, 0);
+				if (update_ops[uo].applyBitmap ^ retimerNotUpdated) {
+					prepareMessageRegistry(
+						(update_ops[uo].applyBitmap ^ retimerNotUpdated),
+						"UpdateSuccessful", update_ops[uo].versionString,
+						MSG_REG_DEV_FOLLOWED_BY_VER,
+						"xyz.openbmc_project.Logging.Entry.Level.Informational",
+						NULL, 0);
 
-		prepareMessageRegistry(
-			retimerToUpdate, "AwaitToActivate",
-			MSG_REG_VER_FOLLOWED_BY_DEV,
-			"xyz.openbmc_project.Logging.Entry.Level.Informational",
-			"AC power cycle", 0);
+					prepareMessageRegistry(
+						(update_ops[uo].applyBitmap ^ retimerNotUpdated),
+						"AwaitToActivate", update_ops[uo].versionString,
+						MSG_REG_VER_FOLLOWED_BY_DEV,
+						"xyz.openbmc_project.Logging.Entry.Level.Informational",
+						"AC power cycle", 0);
+				}
+				goto exit;
+			}
+			prepareMessageRegistry(
+				update_ops[uo].applyBitmap, "UpdateSuccessful",
+				update_ops[uo].versionString, MSG_REG_DEV_FOLLOWED_BY_VER,
+				"xyz.openbmc_project.Logging.Entry.Level.Informational",
+				NULL, 0);
+
+			prepareMessageRegistry(
+				update_ops[uo].applyBitmap, "AwaitToActivate",
+				update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+				"xyz.openbmc_project.Logging.Entry.Level.Informational",
+				"AC power cycle", 0);
+		}
 		break;
 
 	case RETIMER_FW_READ: // 10.0 Read Retimer image
@@ -255,7 +340,7 @@ int main(int argc, char *argv[])
 		}
 
 		// Create and Pass dummy blank FILE of 256KB to clear DPRAM before reading content from Retimer
-		ret = copyImageToFpga(dummyfd, fd, FPGA_I2C_CNTRL_ADDR);
+		ret = copyImageFromFileToFpga(dummyfd, fd, FPGA_I2C_CNTRL_ADDR);
 		if (ret) {
 			fprintf(stderr,
 				"FW read FW image copy to FPGA failed  error code%d!!!",
@@ -300,6 +385,12 @@ exit:
 	}
 	if (dummyfd != -1) {
 		close(dummyfd);
+	}
+	if (imageMappedAddr != NULL && imageMappedAddr != MAP_FAILED && st.st_size >= 0) {
+		munmap((void *)imageMappedAddr, st.st_size);
+	}
+	if (update_ops) {
+		free(update_ops);
 	}
 
 	if ((ret == -ERROR_INPUT_ARGUMENTS) ||

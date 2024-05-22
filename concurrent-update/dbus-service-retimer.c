@@ -211,7 +211,7 @@ int readFWImagenComputeHash(unsigned retimerId)
 	}
 
 	// Create and Pass dummy blank FILE of 256KB to clear DPRAM before reading content from Retimer
-	ret = copyImageToFpga(dummyfd, fd, FPGA_I2C_CNTRL_ADDR);
+	ret = copyImageFromFileToFpga(dummyfd, fd, FPGA_I2C_CNTRL_ADDR);
 	if (ret) {
 		fprintf(stderr,
 			"FW read FW image copy to FPGA failed  error code%d!!!",
@@ -496,6 +496,9 @@ static const sd_bus_vtable vtable_x[] = {
 };
 int main()
 {
+	/* set stdout to line-buffered so it interleaves correctly with stderr */
+	setvbuf(stdout, NULL, _IOLBF, 0);
+
 	/* Connect to the system bus */
 	int ret = sd_bus_open_system(&busHandle);
 	if (ret < 0) {

@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
+#include <iostream>
+#include <fstream>
 #include <cstdint>
 
 extern "C" {
@@ -106,6 +105,114 @@ TEST_F(TestFwupdate, checkfpgaready)
 
 TEST_F(TestFwupdate, read_fwVersion)
 {
+}
+
+unsigned char *readfile(std::string filePath, size_t &len)
+{
+	std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        std::cerr << "Unable to open file: " << filePath << std::endl;
+        return nullptr;
+    }
+    file.seekg(0, std::ios::end);
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    char* buffer = new char[fileSize];
+    file.read(buffer, fileSize);
+
+	len = fileSize;
+	return (unsigned char *)buffer;
+}
+
+TEST_F(TestFwupdate, parsecompositeimage)
+{
+	unsigned char *buf = (unsigned char *)calloc(1, 2048);
+	// Test 1: Test bare image
+	update_operation *update_ops = NULL;
+	int update_ops_count = 0;
+	int ret = 0;
+	ret = parseCompositeImage(buf, 2048, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_EQ(ret, 0);
+	EXPECT_EQ(update_ops_count, 1);
+	ASSERT_TRUE(update_ops);
+	EXPECT_EQ(update_ops[0].applyBitmap, 0xFF);
+	EXPECT_EQ(update_ops[0].imageCrc, 0x86A2E870);
+	EXPECT_EQ(update_ops[0].imageLength, 2048);
+	EXPECT_EQ(update_ops[0].startOffset, 0);
+	std::string uoVersionStringObj;
+	uoVersionStringObj = update_ops[0].versionString;
+	EXPECT_EQ(uoVersionStringObj, "pldm version string");
+	if (update_ops) {
+		free(update_ops);
+	}
+
+	// Test 2: Test bad image with UUID but nothing else
+	memcpy(buf, CompositeImageHeaderUuid, sizeof(CompositeImageHeaderUuid));
+	ret = parseCompositeImage(buf, 2048, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_NE(ret, 0);
+	EXPECT_EQ(update_ops_count, 0);
+	EXPECT_FALSE(update_ops);
+
+	// Test 3: Test valid CompositeImageHeader but file length does not match
+	const unsigned char mph[] = {0x8C, 0x28, 0xD7, 0x7A, 0x97, 0x07, 0x43, 0xD7, 0xBC, 0x13, 0xC1, 0x2B, 0x3A, 0xBB, 0x4B, 0x87, 0x01, 0x00, 0x08, 0x00, 0x28, 0x02, 0x20, 0x00, 0x1D, 0xFA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF2, 0xCA, 0x55, 0x72};
+	memcpy(buf, mph, sizeof(mph));
+	ret = parseCompositeImage(buf, 2048, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_NE(ret, 0);
+	EXPECT_EQ(update_ops_count, 0);
+	EXPECT_FALSE(update_ops);
+
+	// Test 4: Test CompositeImageHeader incorrect CRC
+	const unsigned char mph2[] = {0x8C, 0x28, 0xD7, 0x7A, 0x97, 0x07, 0x43, 0xD7, 0xBC, 0x13, 0xC1, 0x2B, 0x3A, 0xBB, 0x4B, 0x87, 0x01, 0x00, 0x08, 0x00, 0x28, 0x02, 0x20, 0x00, 0x1D, 0xFA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00};
+	memcpy(buf, mph2, sizeof(mph2));
+	ret = parseCompositeImage(buf, 2048, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_NE(ret, 0);
+	EXPECT_EQ(update_ops_count, 0);
+	EXPECT_FALSE(update_ops);
+
+	// All tests using buf are done, free it
+	free(buf);
+
+	// Test 5: valid 8-component image
+	size_t fwLen = 0;
+	unsigned char *fw = nullptr; 
+	fw = readfile("./test-composite-8-components.bin", fwLen);
+	ASSERT_TRUE(fw);
+	ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_EQ(ret, 0);
+	EXPECT_EQ(update_ops_count, 8);
+	ASSERT_TRUE(update_ops);
+	for (int i = 0; i < update_ops_count; i++)
+	{
+		EXPECT_EQ(update_ops[i].applyBitmap, 1 << i);
+		EXPECT_EQ(update_ops[i].imageCrc, 0x8E7869CC);
+		EXPECT_EQ(update_ops[i].imageLength, 0x40000);
+		EXPECT_EQ(update_ops[i].startOffset,
+			sizeof(CompositeImageHeader) + 8 * sizeof(ComponentHeader) + i * 0x40000);
+		uoVersionStringObj = update_ops[i].versionString;
+		EXPECT_EQ(uoVersionStringObj, "2.9.7");
+	}
+	if (update_ops) {
+		free(update_ops);
+	}
+
+	free(fw);
+
+	// Test 6: invalid image, valid MPH hCRC but not others
+	fw = readfile("./test-composite-invalid-ComponentHeaders.bin", fwLen);
+	ASSERT_TRUE(fw);
+	ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
+		&update_ops_count);
+	EXPECT_NE(ret, 0);
+	EXPECT_EQ(update_ops_count, 0);
+	ASSERT_FALSE(update_ops);
+
+	free(fw);
 }
 
 TEST_F(TestFwupdate, copy_image_to_fpga)
