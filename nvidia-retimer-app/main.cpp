@@ -27,9 +27,16 @@ int main(void)
     // handle cases where object may already exists
     for (size_t i = 0; i < numOfRetimers; i++)
     {
-        // set SKU property
-        const std::string& switchPath = retimerApp->getSwitchDBusObject(retimerSwitchesBasePath + std::to_string(i));
-        std::string skuId = retimerApp->getSKUId(switchPath);
+        std::string skuId{};
+        try
+        {
+            const std::string& switchPath = retimerApp->getSwitchDBusObject(retimerSwitchesBasePath + std::to_string(i));
+            skuId = retimerApp->getSKUId(switchPath);
+        }
+        catch (const std::exception &e)
+        {
+            // ignore the error when the app starts
+        }
         if (!skuId.empty())
         {
             dbusMap.objectPath = retimerInventoryPath + std::to_string(i);
