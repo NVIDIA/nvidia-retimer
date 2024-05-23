@@ -62,7 +62,7 @@ ErrorCodeMapTable table[] = {
 volatile extendedErrorCode *dumpExtendedI2CReg = NULL;
 
 const uint8_t CompositeImageHeaderUuid[16] = {0x8c, 0x28, 0xd7, 0x7a, 0x97, 0x07, 0x43, 0xd7, 0xbc, 0x13, 0xc1, 0x2b, 0x3a, 0xbb, 0x4b, 0x87};
-const uint8_t ComponentHeaderMagic[4] = {(uint8_t) 'R', (uint8_t) 'I', (uint8_t) 'T', (uint8_t) 'H'};
+const uint8_t ComponentHeaderMagic[4] = {(uint8_t) 'R', (uint8_t) 'T', (uint8_t) 'I', (uint8_t) 'H'};
 
 void debug_print(char *fmt, ...)
 {
@@ -695,7 +695,7 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		for (int comp = 0; comp < compositeImageHeader->componentCount; comp++) {
 			fprintf(stdout, "verifying ComponentHeader %d\n", comp);
 			// Verify ComponentHeader.magic
-			if (!memcmp(&componentHeaders[comp], ComponentHeaderMagic,
+			if (memcmp(&componentHeaders[comp], ComponentHeaderMagic,
 				sizeof(ComponentHeaderMagic))) {
 				ret = -ERROR_COMPOSITE_IMAGE_HEADER_CORRUPT;
 				strncpy(msg, "ComponentHeader is invalid", sizeof(msg) - 1);

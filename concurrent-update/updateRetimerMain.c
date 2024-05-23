@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
 	const unsigned char *imageMappedAddr = NULL;
 	update_operation *update_ops = NULL;
 	int update_ops_count = -1;
+	int updateFirstErrRet = 0;
 
 	// set stdout to line-buffered so it interleaves correctly with stderr
 	setvbuf(stdout, NULL, _IOLBF, 0);
@@ -271,7 +272,8 @@ int main(int argc, char *argv[])
 					update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
-				goto exit;
+				updateFirstErrRet = ret;
+				continue;
 			}
 
 			// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
@@ -303,7 +305,8 @@ int main(int argc, char *argv[])
 						"xyz.openbmc_project.Logging.Entry.Level.Informational",
 						"AC power cycle", 0);
 				}
-				goto exit;
+				updateFirstErrRet = ret;
+				continue;
 			}
 			prepareMessageRegistry(
 				update_ops[uo].applyBitmap, "UpdateSuccessful",
@@ -316,6 +319,9 @@ int main(int argc, char *argv[])
 				update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Informational",
 				"AC power cycle", 0);
+		}
+		if (!ret && updateFirstErrRet) {
+			ret = updateFirstErrRet;
 		}
 		break;
 
