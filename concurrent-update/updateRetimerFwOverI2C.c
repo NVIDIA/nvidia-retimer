@@ -874,7 +874,6 @@ int copyImageFromFileToFpga(int fw_fd, int fd, unsigned int slaveId)
 	}
 	fw_size = st.st_size;
 	/* Check FW image size */
-	/* fw_size must be mutiple of BYTE_PER_PAGE */
 	if ((fw_size <= 0) || (fw_size > MAX_FW_IMAGE_SIZE)) {
 		fprintf(stderr, "\nNot a valid size: [%s]\n", strerror(errno));
 		close(fw_fd);
@@ -926,7 +925,7 @@ int copyImageFromMemToFpga(const unsigned char *fw_addr, size_t fw_size,
 	unsigned int pageCount = 0;
 
 	// because size_t is unsigned, fw_size <= 0 check doesn't make sense
-	if ((fw_size > MAX_FW_IMAGE_SIZE) || (fw_size % BYTE_PER_PAGE)) {
+	if (fw_size > MAX_FW_IMAGE_SIZE) {
 		fprintf(stderr, "\nNot a valid size: [%zu]\n", fw_size);
 		return -ERROR_WRONG_FIRMWARE;
 	}
