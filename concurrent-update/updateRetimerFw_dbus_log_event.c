@@ -50,10 +50,6 @@ void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 		snprintf(updateMessage, BUFFER_LENGTH, "Update.1.0.%s",
 			 message);
 
-	// Identifying the error is sent by hash computation service or FW update service
-	char *namespaceValue = "FWUpdate";
-	setErrorNamespace(&namespaceValue);
-
 	debug_print("Attempting call\n");
 	if (resolution) {
 		if (sd_bus_call_method(
@@ -63,7 +59,7 @@ void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 			    "REDFISH_MESSAGE_ID", updateMessage,
 			    "REDFISH_MESSAGE_ARGS", args,
 			    "xyz.openbmc_project.Logging.Entry.Resolution",
-			    resolution, "namespace", namespaceValue) < 0) {
+			    resolution, "namespace", "FWUpdate") < 0) {
 			fprintf(stderr, "Unable to call log creation function");
 		}
 	} else {
@@ -73,44 +69,9 @@ void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
 				       LOG_CREATE_SIGNATURE, updateMessage,
 				       severity, 3, "REDFISH_MESSAGE_ID",
 				       updateMessage, "REDFISH_MESSAGE_ARGS",
-				       args, "namespace", namespaceValue) < 0) {
+				       args, "namespace", "FWUpdate") < 0) {
 			fprintf(stderr, "Unable to call log creation function");
 		}
 	}
 	debug_print("Call completed\n");
-}
-
-void setErrorNamespace(char **errorNamespace)
-{
-	sd_bus_error error = SD_BUS_ERROR_NULL;
-	sd_bus *bus = NULL;
-	const char *service = "xyz.openbmc_project.State.ConfigurableStateManager";
-	const char *path = "/xyz/openbmc_project/state/configurableStateManager/FWUpdate";
-	const char *interface = "xyz.openbmc_project.State.FeatureReady";
-	const char *property = "State";
-	char *value;
-	int r;
-
-	r = sd_bus_open_system(&bus);
-	if (r < 0) {
-		fprintf(stderr, "Failed to connect to system bus: %s\n", strerror(-r));
-		return;
-	}
-
-	// Identify the sender of error by checking CSM state
-	r = sd_bus_get_property_string(bus, service, path, interface, property, &error, &value);
-	if (r < 0) {
-		fprintf(stderr, "Failed to read property '%s': %s\n", property, error.message);
-		sd_bus_error_free(&error);
-		sd_bus_unref(bus);
-		return;
-	}
-	if (strcmp(value, "xyz.openbmc_project.State.FeatureReady.States.Enabled") != 0) {
-		*errorNamespace = "default";
-	}
-
-	sd_bus_error_free(&error);
-	sd_bus_unref(bus);
-	free(value);
-	return;
 }
