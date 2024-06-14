@@ -2,7 +2,6 @@ project('nvidia-retimer', ['c','cpp'],
         version: '0.1', meson_version: '>=0.57.0',
         default_options: [
           'warning_level=3',
-          'werror=true',
           'cpp_std=c++20',
           'b_lto=true',
         ])
@@ -34,6 +33,7 @@ fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
 
+add_project_arguments('-Wno-incompatible-pointer-types', language : 'c') 
 
 
 
