@@ -39,7 +39,7 @@
 extern uint8_t verbosity;
 extern const uint8_t mask_retimer[];
 extern char *arrRetimer[];
-extern uint8_t retimerNum;
+extern uint8_t retimerBitmap;
 
 /************************************************
  * show_usage()
@@ -56,17 +56,17 @@ void show_usage(char *exec)
 	printf("\nUsage: %s <i2c bus number> <retimer number> <firmware filename> <update/read> <versionStr> <verbosity>\n",
 	       exec);
 	printf("        i2c bus number	: must be digits [3-12]\n");
-	printf("        retimer number		: must be digits [0-7]\n");
+	printf("        retimer bitmap		: bitmap for retimer indices 0-7, 255 to update all retimers\n");
 	printf("        update/read/write	: 0=Update, 1=Read \n");
 	printf("        versionStr(optional): versionStr for message registry \n");
 	printf("        verbosity(debug)	: 1=enabled, 0=disable \n");
-	printf("        EX: %s 12 8 <FW_image>.bin 0 <1>\n\n", exec);
+	printf("        EX: %s 12 255 <FW_image>.bin 0 <1>\n\n", exec);
 }
 
 /******************************************************************************
 * Usage:  updateRetimerFw  <i2c bus number>  <retimer number> <firmware filename> <update/read> <VersionStr> <verbosity>
 * i2c bus number          : must be digits [3-12]
-* retimer number          : must be digits [0-7], 8 for all retimers update
+* retimer bitmap          : bitmap for retimer indices 0-7, 255 to update all retimers
 * update/read/write       : 0=Update, 1=Read
 * versionStr(optional)    : versionStr for message registry
 * verbosity(debug)        : 1=enabled, 0=disable 
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
-	retimerNum = atoi(argv[2]);
+	retimerBitmap = atoi(argv[2]);
 	retimerToUpdate = atoi(argv[2]);
 	retimerToRead = atoi(argv[2]);
 
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Start FW update procedure...\n");
 		fprintf(stdout, "Read FW Image...%s Verion %s \n",
 			imageFilename, versionStr);
-		fprintf(stdout, "Retimer under update ...%d \n", retimerNum);
+		fprintf(stdout, "Retimer under update ...%d \n", retimerBitmap);
 
 		imagefd = open(imageFilename, O_RDONLY);
 

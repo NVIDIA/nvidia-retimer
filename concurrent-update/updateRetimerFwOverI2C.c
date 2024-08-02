@@ -43,7 +43,7 @@ char *arrRetimer[] = {
 	"HGX_FW_PCIeRetimer_6", "HGX_FW_PCIeRetimer_7",
 };
 
-uint8_t retimerNum = INIT_UINT8;
+uint8_t retimerBitmap = INIT_UINT8;
 
 /*
 * Extended Error handling for Retimer FW update, ERR_PCIE_TIMEOUT_STOPPED_RT_EEPROM_UPDATE 
