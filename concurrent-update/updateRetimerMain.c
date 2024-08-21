@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 			goto exit;
 		}
 		close(dummyfd);
-
+		dummyfd = -1;
 		break;
 
 	default:

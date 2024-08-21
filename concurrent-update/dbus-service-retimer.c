@@ -57,7 +57,7 @@ int readFWImagenComputeHash(unsigned retimerId)
 	int fd = INIT_INT;
 	int ret = INIT_INT;
 	int bus = FPGA_I2C_BUS;
-	char hashValue[HASH_LENGTH] = { 0 };
+	char hashValue[HASH_LENGTH * 2] = { 0 };
 
 	sprintf(i2c_device, "/dev/i2c-%u", bus);
 
@@ -273,8 +273,9 @@ static int property_get_hashDigest(sd_bus *bus, const char *path,
 	assert(interface);
 	assert(property);
 	unsigned retimerId = 0xFF;
-	sscanf(path, "/com/Nvidia/ComputeHash/HGX_FW_PCIeRetimer_%u",
-	       &retimerId);
+	if (!sscanf(path, "/com/Nvidia/ComputeHash/HGX_FW_PCIeRetimer_%u", &retimerId)) {
+		return EXIT_FAILURE;
+	}
 	return sd_bus_message_append(reply, "s",
 				     g_retimerHash[retimerId].hashDigest);
 }
@@ -378,7 +379,4 @@ int main()
 			return EXIT_FAILURE;
 		}
 	}
-	/* Unreference the bus */
-	sd_bus_unref(busHandle);
-	return EXIT_SUCCESS;
 }

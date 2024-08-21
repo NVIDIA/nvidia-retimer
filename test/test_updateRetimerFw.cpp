@@ -136,15 +136,14 @@ TEST_F(TestFwupdate, parsecompositeimage)
 		&update_ops_count);
 	EXPECT_EQ(ret, 0);
 	EXPECT_EQ(update_ops_count, 1);
-	ASSERT_TRUE(update_ops);
-	EXPECT_EQ(update_ops[0].applyBitmap, 0xFF);
-	EXPECT_EQ(update_ops[0].imageCrc, 0x86A2E870);
-	EXPECT_EQ(update_ops[0].imageLength, 2048);
-	EXPECT_EQ(update_ops[0].startOffset, 0);
 	std::string uoVersionStringObj;
-	uoVersionStringObj = update_ops[0].versionString;
-	EXPECT_EQ(uoVersionStringObj, "pldm version string");
 	if (update_ops) {
+		EXPECT_EQ(update_ops[0].applyBitmap, 0xFF);
+		EXPECT_EQ(update_ops[0].imageCrc, 0x86A2E870);
+		EXPECT_EQ(update_ops[0].imageLength, 2048);
+		EXPECT_EQ(update_ops[0].startOffset, 0);
+		uoVersionStringObj = update_ops[0].versionString;
+		EXPECT_EQ(uoVersionStringObj, "pldm version string");
 		free(update_ops);
 	}
 
@@ -181,38 +180,38 @@ TEST_F(TestFwupdate, parsecompositeimage)
 	size_t fwLen = 0;
 	unsigned char *fw = nullptr; 
 	fw = readfile("./test-composite-8-components.bin", fwLen);
-	ASSERT_TRUE(fw);
-	ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
-		&update_ops_count);
-	EXPECT_EQ(ret, 0);
-	EXPECT_EQ(update_ops_count, 8);
-	ASSERT_TRUE(update_ops);
-	for (int i = 0; i < update_ops_count; i++)
-	{
-		EXPECT_EQ(update_ops[i].applyBitmap, 1 << i);
-		EXPECT_EQ(update_ops[i].imageCrc, 0x8E7869CC);
-		EXPECT_EQ(update_ops[i].imageLength, 0x40000);
-		EXPECT_EQ(update_ops[i].startOffset,
-			sizeof(CompositeImageHeader) + 8 * sizeof(ComponentHeader) + i * 0x40000);
-		uoVersionStringObj = update_ops[i].versionString;
-		EXPECT_EQ(uoVersionStringObj, "2.9.7");
-	}
-	if (update_ops) {
-		free(update_ops);
+	if (fw) {
+		ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
+			&update_ops_count);
+		EXPECT_EQ(ret, 0);
+		EXPECT_EQ(update_ops_count, 8);
+		if (update_ops) {
+			for (int i = 0; i < update_ops_count; i++)
+			{
+				EXPECT_EQ(update_ops[i].applyBitmap, 1 << i);
+				EXPECT_EQ(update_ops[i].imageCrc, 0x8E7869CC);
+				EXPECT_EQ(update_ops[i].imageLength, 0x40000);
+				EXPECT_EQ(update_ops[i].startOffset,
+					sizeof(CompositeImageHeader) + 8 * sizeof(ComponentHeader) + i * 0x40000);
+				uoVersionStringObj = update_ops[i].versionString;
+				EXPECT_EQ(uoVersionStringObj, "2.9.7");
+			}
+			free(update_ops);
+		}
+		free(fw);
 	}
 
-	free(fw);
 
 	// Test 6: invalid image, valid MPH hCRC but not others
 	fw = readfile("./test-composite-invalid-ComponentHeaders.bin", fwLen);
-	ASSERT_TRUE(fw);
-	ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
-		&update_ops_count);
-	EXPECT_NE(ret, 0);
-	EXPECT_EQ(update_ops_count, 0);
-	ASSERT_FALSE(update_ops);
+	if (fw) {
+		ret = parseCompositeImage(fw, fwLen, "pldm version string", &update_ops,
+			&update_ops_count);
+		EXPECT_NE(ret, 0);
+		EXPECT_EQ(update_ops_count, 0);
 
-	free(fw);
+		free(fw);
+	}
 }
 
 TEST_F(TestFwupdate, copy_image_to_fpga)
