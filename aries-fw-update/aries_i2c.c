@@ -20,21 +20,21 @@
  */
 
 #include "include/aries_i2c.h"
+
 #include "include/aries_misc.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-#include <unistd.h>
 #include <math.h>
+#include <unistd.h>
 
 /*
  * Set Slave address to user-specified value: new7bitSmbusAddr
  */
-AriesErrorType ariesRunArp(
-        int handle,
-        uint8_t new7bitSmbusAddr)
+AriesErrorType ariesRunArp(int handle, uint8_t new7bitSmbusAddr)
 {
     int rc;
     uint8_t dataByte[1];
@@ -59,8 +59,10 @@ AriesErrorType ariesRunArp(
     // address byte (0x61<<1 = 0xc2), the command code (0x4), and the remainder
     // of the Assign Address command.
     uint8_t new8bitSmbusAddr = new7bitSmbusAddr << 1;
-    uint8_t pec_data[21] = {0xc2, 4, 17, 1, 9, 29, 250, 0, 1, 0, 21, 0, 0,
-        0, 0, 0, 0, 0, 1, 0, 0}; // last byte is new 8-bit SMBus address
+    uint8_t pec_data[21] = {
+        0xc2, 4, 17, 1, 9, 29, 250, 0, 1, 0, 21,
+        0,    0, 0,  0, 0, 0,  0,   1, 0, 0}; // last byte is new 8-bit SMBus
+                                              // address
     pec_data[19] = new8bitSmbusAddr;
     uint8_t crc = ariesGetPecByte(pec_data, 21);
 
@@ -69,7 +71,7 @@ AriesErrorType ariesRunArp(
     uint8_t i;
     for (i = 0; i < 18; i++)
     {
-        dataBytes[i] = pec_data[i+2];
+        dataBytes[i] = pec_data[i + 2];
     }
     dataBytes[18] = crc; // PEC byte
 
@@ -79,15 +81,12 @@ AriesErrorType ariesRunArp(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write multiple data bytes to Aries over I2C
  */
-AriesErrorType ariesWriteBlockData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType ariesWriteBlockData(AriesI2CDriverType* i2cDriver,
+                                   uint32_t address, uint8_t numBytes,
+                                   uint8_t* values)
 {
     uint8_t cmdCode;
     uint8_t pecEn;
@@ -138,7 +137,7 @@ AriesErrorType ariesWriteBlockData(
             end = 1;
             pos = 0;
 
-            address += (numIters*4);
+            address += (numIters * 4);
 
             handle = i2cDriver->handle;
 
@@ -148,8 +147,8 @@ AriesErrorType ariesWriteBlockData(
                 pecEn = 1;
             }
 
-            addr15To8 = (address & 0xff00) >> 8;    // Get bits 16:8
-            addr7To0 = address & 0xff;              // Get bits 7:0
+            addr15To8 = (address & 0xff00) >> 8; // Get bits 16:8
+            addr7To0 = address & 0xff;           // Get bits 7:0
 
             // Set buffer length based on number of bytes being written
             // Include 2 bytes of address in calculation
@@ -163,7 +162,7 @@ AriesErrorType ariesWriteBlockData(
 
             // Construct Command code
             cmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) +
-                (start << 1) + (end << 0);
+                      (start << 1) + (end << 0);
 
             ASTERA_TRACE("Write:");
             ASTERA_TRACE("    cmdCode = 0x%02x", cmdCode);
@@ -174,9 +173,9 @@ AriesErrorType ariesWriteBlockData(
             int byteIndex;
             for (byteIndex = 0; byteIndex < currBytes; byteIndex++)
             {
-                writeBuf[(byteIndex+3)] = values[byteIndex+(4*numIters)];
-                ASTERA_TRACE("    writeBuf[%d] = 0x%02x", (byteIndex+3),
-                    (values[byteIndex+(4*numIters)]));
+                writeBuf[(byteIndex + 3)] = values[byteIndex + (4 * numIters)];
+                ASTERA_TRACE("    writeBuf[%d] = 0x%02x", (byteIndex + 3),
+                             (values[byteIndex + (4 * numIters)]));
             }
 
             // Set PEC bits
@@ -195,23 +194,24 @@ AriesErrorType ariesWriteBlockData(
                 ASTERA_TRACE("        pecBuf[1] = 0x%02x", wrStream[1]);
 
                 uint8_t wrStreamIdx;
-                for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen-1); wrStreamIdx++)
+                for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen - 1);
+                     wrStreamIdx++)
                 {
-                    wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx-2)];
+                    wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx - 2)];
                     ASTERA_TRACE("        pecBuf[%d] = 0x%02x", wrStreamIdx,
-                        wrStream[wrStreamIdx]);
+                                 wrStream[wrStreamIdx]);
                 }
-                wrStream[(wrStreamLen-1)] = 0x0;
+                wrStream[(wrStreamLen - 1)] = 0x0;
                 ASTERA_TRACE("        pecBuf[last] = 0x0");
 
                 // Calculate CRC8 byte from polynomial
                 wrPec = ariesGetPecByte(wrStream, wrStreamLen);
-                writeBuf[(writeNumBytes-1)] = wrPec;
+                writeBuf[(writeNumBytes - 1)] = wrPec;
                 ASTERA_TRACE("    writeBuf[last] = 0x%02x", wrPec);
             }
 
             rc = asteraI2CWriteBlockData(handle, cmdCode, writeNumBytes,
-                writeBuf);
+                                         writeBuf);
             CHECK_SUCCESS(rc);
 
             // Increment iteration count
@@ -232,19 +232,16 @@ AriesErrorType ariesWriteBlockData(
             pecEn = 1;
         }
 
-        // Buffer Length must include extra bytes to add "numBytes" and addr info
-        // 1 byte for "numBytes"
-        // 1 byte for cfg_type, burstLen, addr[17] etc
-        // 2 bytes for 16 bit addr
-        // Rest is data bytes
-        // 1 byte for pec
+        // Buffer Length must include extra bytes to add "numBytes" and addr
+        // info 1 byte for "numBytes" 1 byte for cfg_type, burstLen, addr[17]
+        // etc 2 bytes for 16 bit addr Rest is data bytes 1 byte for pec
         uint8_t wrBufLen = numBytes + 4 + pecEn;
         uint8_t writeBuf[wrBufLen];
 
         uint8_t config;
         uint8_t cfg_type = 1;
         uint8_t bdcst = 0;
-        uint8_t burstLen = (numBytes-1);
+        uint8_t burstLen = (numBytes - 1);
         uint8_t addr17;
 
         handle = i2cDriver->handle;
@@ -253,17 +250,18 @@ AriesErrorType ariesWriteBlockData(
 
         // Construct Command code
         cmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) + (start << 1) +
-            (end << 0);
+                  (end << 0);
 
         // Construct Config & Offset Upper byte
-        addr17 = (address & 0x10000) >> 16;     // Get 17bit of addr
-        addr15To8 = (address & 0xff00) >> 8;    // Get bits 16:8
-        addr7To0 = address & 0xff;              // Get bits 7:0
+        addr17 = (address & 0x10000) >> 16;  // Get 17bit of addr
+        addr15To8 = (address & 0xff00) >> 8; // Get bits 16:8
+        addr7To0 = address & 0xff;           // Get bits 7:0
 
-        config = (cfg_type << 6) + (bdcst << 4) + (burstLen << 1) + (addr17 << 0);
+        config = (cfg_type << 6) + (bdcst << 4) + (burstLen << 1) +
+                 (addr17 << 0);
 
         // Construct data buffer
-        writeBuf[0] = wrBufLen-1-pecEn;
+        writeBuf[0] = wrBufLen - 1 - pecEn;
         writeBuf[1] = config;
         writeBuf[2] = addr15To8;
         writeBuf[3] = addr7To0;
@@ -278,7 +276,7 @@ AriesErrorType ariesWriteBlockData(
         // Fill up data buffer
         for (pos = 0; pos < numBytes; pos++)
         {
-            int bufPos = pos+4;
+            int bufPos = pos + 4;
             writeBuf[bufPos] = values[pos];
             ASTERA_TRACE("    writeBuf[%d] = 0x%02x", bufPos, writeBuf[bufPos]);
         }
@@ -299,18 +297,20 @@ AriesErrorType ariesWriteBlockData(
             ASTERA_TRACE("        pecBuf[1] = 0x%02x", wrStream[1]);
 
             uint8_t wrStreamIdx;
-            for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen-1); wrStreamIdx++)
+            for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen - 1);
+                 wrStreamIdx++)
             {
-                wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx-2)];
+                wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx - 2)];
                 ASTERA_TRACE("        pecBuf[%d] = 0x%02x", wrStreamIdx,
-                    wrStream[wrStreamIdx]);
+                             wrStream[wrStreamIdx]);
             }
-            wrStream[(wrStreamLen-1)] = 0x0;
+            wrStream[(wrStreamLen - 1)] = 0x0;
 
             // Calculate CRC8 byte from polynomial
             wrPec = ariesGetPecByte(wrStream, wrStreamLen);
-            writeBuf[(wrBufLen-1)] = wrPec;
-            ASTERA_TRACE("    writeBuf[%d] = 0x%02x", (wrBufLen-1), writeBuf[(wrBufLen-1)]);
+            writeBuf[(wrBufLen - 1)] = wrPec;
+            ASTERA_TRACE("    writeBuf[%d] = 0x%02x", (wrBufLen - 1),
+                         writeBuf[(wrBufLen - 1)]);
         }
 
         // This translates to actual low level library call
@@ -322,27 +322,21 @@ AriesErrorType ariesWriteBlockData(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write a data byte to Aries over I2C
  */
-AriesErrorType ariesWriteByteData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value)
+AriesErrorType ariesWriteByteData(AriesI2CDriverType* i2cDriver,
+                                  uint32_t address, uint8_t* value)
 {
     return ariesWriteBlockData(i2cDriver, address, 1, value);
 }
 
-
 /*
  * Read multiple data bytes from Aries over I2C
  */
-AriesErrorType ariesReadBlockData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType ariesReadBlockData(AriesI2CDriverType* i2cDriver,
+                                  uint32_t address, uint8_t numBytes,
+                                  uint8_t* values)
 {
     AriesErrorType rc;
     int readBytes;
@@ -355,8 +349,8 @@ AriesErrorType ariesReadBlockData(
     uint8_t start;
     uint8_t end;
 
-    uint8_t addr15To8;  // Get bits 16:8
-    uint8_t addr7To0;   // Get bits 7:0
+    uint8_t addr15To8; // Get bits 16:8
+    uint8_t addr7To0;  // Get bits 7:0
 
     uint8_t tryIndex;
     uint8_t readTryCount = 3;
@@ -366,7 +360,8 @@ AriesErrorType ariesReadBlockData(
         // Addresses in this format can be 16 bit only
         if (address > 0xffff)
         {
-            ASTERA_ERROR("Address greater than allowed 16 bit (0x%08x)", address);
+            ASTERA_ERROR("Address greater than allowed 16 bit (0x%08x)",
+                         address);
             return ARIES_INVALID_ARGUMENT;
         }
 
@@ -390,7 +385,7 @@ AriesErrorType ariesReadBlockData(
             end = 0;
 
             // Increment address when you update numIters
-            address += (numIters*4);
+            address += (numIters * 4);
 
             int handle = i2cDriver->handle;
             if (i2cDriver->pecEnable == ARIES_I2C_PEC_ENABLE)
@@ -398,14 +393,14 @@ AriesErrorType ariesReadBlockData(
                 pecEn = 1;
             }
 
-            wrCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) + (start << 1) +
-                (end << 0);
+            wrCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) +
+                        (start << 1) + (end << 0);
 
             addr15To8 = (address & 0xff00) >> 8;
             addr7To0 = address & 0xff;
 
             int wrNumBytes = 2 + pecEn;
-            int writeBufLen = wrNumBytes+1;
+            int writeBufLen = wrNumBytes + 1;
             uint8_t writeBuf[writeBufLen];
 
             writeBuf[0] = wrNumBytes;
@@ -432,14 +427,14 @@ AriesErrorType ariesReadBlockData(
                 ASTERA_TRACE("        pecBuf[0] = 0x%02x", wrStream[0]);
                 ASTERA_TRACE("        pecBuf[1] = 0x%02x", wrStream[1]);
                 int byteIdx;
-                for (byteIdx = 2; byteIdx < (wrStreamLen-1); byteIdx++)
+                for (byteIdx = 2; byteIdx < (wrStreamLen - 1); byteIdx++)
                 {
-                    wrStream[byteIdx] = writeBuf[(byteIdx-2)];
+                    wrStream[byteIdx] = writeBuf[(byteIdx - 2)];
                     ASTERA_TRACE("        pecBuf[%d] = 0x%02x", byteIdx,
-                        wrStream[byteIdx]);
+                                 wrStream[byteIdx]);
                 }
                 // Append 0x0 as CRC Polynomial
-                wrStream[(wrStreamLen-1)] = 0x0;
+                wrStream[(wrStreamLen - 1)] = 0x0;
                 ASTERA_TRACE("        pecBuf[last] = 0x0");
 
                 uint8_t wrPec = ariesGetPecByte(wrStream, wrStreamLen);
@@ -465,7 +460,7 @@ AriesErrorType ariesReadBlockData(
             for (tryIndex = 0; tryIndex < readTryCount; tryIndex++)
             {
                 rc = asteraI2CWriteBlockData(handle, wrCmdCode, writeBufLen,
-                writeBuf);
+                                             writeBuf);
                 if (rc != ARIES_SUCCESS)
                 {
                     ariesUnlock(i2cDriver);
@@ -477,20 +472,21 @@ AriesErrorType ariesReadBlockData(
                 funcCode = 0;
 
                 rdCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) +
-                    (start << 1) + (end << 0);
+                            (start << 1) + (end << 0);
 
                 ASTERA_TRACE("Read:");
                 ASTERA_TRACE("    cmdCode = 0x%02x", rdCmdCode);
 
                 rc = asteraI2CReadBlockData(handle, rdCmdCode, readBufLen,
-                    readBuf);
+                                            readBuf);
 
                 if ((rc != readBufLen) || (readBuf[0] >= 5))
                 {
-                    ASTERA_TRACE("ariesReadBlockData() interrupted by intervening transaction");
+                    ASTERA_TRACE(
+                        "ariesReadBlockData() interrupted by intervening transaction");
                     ASTERA_TRACE("    Performing read operation again ...");
                     rc = ARIES_I2C_BLOCK_READ_FAILURE;
-                    if (tryIndex == (readTryCount-1))
+                    if (tryIndex == (readTryCount - 1))
                     {
                         ASTERA_ERROR("Incorrect num. bytes returned by read");
                         ariesUnlock(i2cDriver);
@@ -502,7 +498,6 @@ AriesErrorType ariesReadBlockData(
                     rc = ARIES_SUCCESS;
                     break;
                 }
-
             }
 
             // Unlock previous lock set before write
@@ -525,7 +520,7 @@ AriesErrorType ariesReadBlockData(
                 uint8_t rdStreamId;
                 for (rdStreamId = 3; rdStreamId < readStreamLen; rdStreamId++)
                 {
-                    readStream[rdStreamId] = readBuf[rdStreamId-3];
+                    readStream[rdStreamId] = readBuf[rdStreamId - 3];
                 }
                 rdPec = ariesGetPecByte(readStream, readStreamLen);
                 if (rdPec != 0)
@@ -539,7 +534,7 @@ AriesErrorType ariesReadBlockData(
             int byteIndex;
             for (byteIndex = 0; byteIndex < numBytes; byteIndex++)
             {
-                values[byteIndex+(4*numIters)] = readBuf[(3+byteIndex)];
+                values[byteIndex + (4 * numIters)] = readBuf[(3 + byteIndex)];
             }
 
             // Increment iteration count
@@ -566,24 +561,24 @@ AriesErrorType ariesReadBlockData(
         ASTERA_TRACE("Reading from address: 0x%08x", address);
 
         // Construct command code
-        wrCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) + (start << 1) +
-            (end << 0);
+        wrCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) +
+                    (start << 1) + (end << 0);
 
         // Construct Config & Offset Upper byte
         uint8_t config;
-        uint8_t addr17;    // Get 17bit of addr
-        addr17 = (address & 0x10000) >> 16;    // Get 17bit of addr
-        addr15To8 = (address & 0xff00) >> 8;    // Get bits 16:8
-        addr7To0 = address & 0xff;              // Get bits 7:0
+        uint8_t addr17;                      // Get 17bit of addr
+        addr17 = (address & 0x10000) >> 16;  // Get 17bit of addr
+        addr15To8 = (address & 0xff00) >> 8; // Get bits 16:8
+        addr7To0 = address & 0xff;           // Get bits 7:0
 
         uint8_t cfg_type = 0;
         uint8_t bdcst = 0;
-        uint8_t burstLen = (numBytes-1);
+        uint8_t burstLen = (numBytes - 1);
 
         config = (cfg_type << 6) + (bdcst << 4) + (burstLen << 1) +
-            (addr17 << 0);
+                 (addr17 << 0);
 
-        writeBuf[0] = wrBufLength-1;
+        writeBuf[0] = wrBufLength - 1;
         writeBuf[1] = config;
         writeBuf[2] = addr15To8;
         writeBuf[3] = addr7To0;
@@ -607,12 +602,14 @@ AriesErrorType ariesReadBlockData(
             ASTERA_TRACE("        pecBuf[1] = 0x%02x", wrStream[1]);
 
             uint8_t wrStreamIdx;
-            for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen-1); wrStreamIdx++)
+            for (wrStreamIdx = 2; wrStreamIdx < (wrStreamLen - 1);
+                 wrStreamIdx++)
             {
-                wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx-2)];
-                ASTERA_TRACE("        pecBuf[%d] = 0x%02x", wrStreamIdx, wrStream[wrStreamIdx]);
+                wrStream[wrStreamIdx] = writeBuf[(wrStreamIdx - 2)];
+                ASTERA_TRACE("        pecBuf[%d] = 0x%02x", wrStreamIdx,
+                             wrStream[wrStreamIdx]);
             }
-            wrStream[(wrStreamLen-1)] = 0x0;  // Addition PEC byte
+            wrStream[(wrStreamLen - 1)] = 0x0; // Addition PEC byte
             ASTERA_TRACE("        pecBuf[last] = 0x0");
 
             uint8_t wrPec = ariesGetPecByte(wrStream, wrStreamLen);
@@ -631,12 +628,13 @@ AriesErrorType ariesReadBlockData(
         uint8_t readBuf[readBufLen];
 
         // Perform read operation
-        // Try the read operation upto 3 times before issuing a block read failure
+        // Try the read operation upto 3 times before issuing a block read
+        // failure
         for (tryIndex = 0; tryIndex < readTryCount; tryIndex++)
         {
             // First write address you wish to read from
             rc = asteraI2CWriteBlockData(handle, wrCmdCode, wrBufLength,
-                writeBuf);
+                                         writeBuf);
             if (rc != ARIES_SUCCESS)
             {
                 ariesUnlock(i2cDriver);
@@ -646,30 +644,32 @@ AriesErrorType ariesReadBlockData(
             funcCode = 2;
             start = 0;
             end = 1;
-            rdCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) + (start << 1)
-                + (end << 0);
+            rdCmdCode = (pecEn << 7) + (rsvd << 5) + (funcCode << 2) +
+                        (start << 1) + (end << 0);
 
             ASTERA_TRACE("Read:");
             ASTERA_TRACE("    cmdCode = 0x%02x", rdCmdCode);
 
             // Perform read operation
-            // First byte returned is length. Hence add length+1 as bytes to read
+            // First byte returned is length. Hence add length+1 as bytes to
+            // read
             readBytes = asteraI2CReadBlockData(handle, rdCmdCode, readBufLen,
-                readBuf);
-                /*printf("Read (Rd): ");*/
-                /*printf("0x%02x ", rdCmdCode);*/
-                /*for (i = 0; i < readBufLen; i++)*/
-                /*{*/
-                    /*printf("0x%02x ", readBuf[i]);*/
-                /*}*/
-                /*printf("\n");*/
+                                               readBuf);
+            /*printf("Read (Rd): ");*/
+            /*printf("0x%02x ", rdCmdCode);*/
+            /*for (i = 0; i < readBufLen; i++)*/
+            /*{*/
+            /*printf("0x%02x ", readBuf[i]);*/
+            /*}*/
+            /*printf("\n");*/
             if (readBytes != readBufLen)
             {
-                ASTERA_TRACE("ariesReadBlockData() interrupted by intervening transaction");
+                ASTERA_TRACE(
+                    "ariesReadBlockData() interrupted by intervening transaction");
                 ASTERA_TRACE("Perform read again ... ");
                 rc = ARIES_I2C_BLOCK_READ_FAILURE;
 
-                if (tryIndex == (readTryCount-1))
+                if (tryIndex == (readTryCount - 1))
                 {
                     ASTERA_ERROR("Incorrect num. bytes returned by read");
                     ariesUnlock(i2cDriver);
@@ -703,7 +703,7 @@ AriesErrorType ariesReadBlockData(
             uint8_t rdStreamIdx;
             for (rdStreamIdx = 3; rdStreamIdx < rdStreamLen; rdStreamIdx++)
             {
-                rdStream[rdStreamIdx] = readBuf[rdStreamIdx-3];
+                rdStream[rdStreamIdx] = readBuf[rdStreamIdx - 3];
             }
 
             rdPec = ariesGetPecByte(rdStream, rdStreamLen);
@@ -712,42 +712,34 @@ AriesErrorType ariesReadBlockData(
                 ASTERA_ERROR("PEC value not as expected");
                 return ARIES_I2C_BLOCK_READ_FAILURE;
             }
-
         }
 
         // Print the values
         ASTERA_TRACE("Values read:");
         for (pos = 0; pos < numBytes; pos++)
         {
-            values[pos] = readBuf[(pos+1)] + 0;
-    	    ASTERA_TRACE("    Read_Buf[%d] = 0x%02x", pos, values[pos]);
+            values[pos] = readBuf[(pos + 1)] + 0;
+            ASTERA_TRACE("    Read_Buf[%d] = 0x%02x", pos, values[pos]);
         }
     }
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Read a data byte from Aries over I2C
  */
-AriesErrorType ariesReadByteData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* values)
+AriesErrorType ariesReadByteData(AriesI2CDriverType* i2cDriver,
+                                 uint32_t address, uint8_t* values)
 {
     return ariesReadBlockData(i2cDriver, address, 1, values);
 }
-
 
 /*
  * Read multiple (up to eight) data bytes from micro SRAM over I2C
  */
 AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t *values)
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t numBytes, uint8_t* values)
 {
     AriesErrorType rc;
     AriesErrorType lc;
@@ -768,7 +760,7 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
         eepromAddrBytes[1] = (eepromAccAddr >> 8) & 0xff;
         eepromAddrBytes[2] = (eepromAccAddr >> 16) & 0xff;
         rc = ariesWriteBlockData(i2cDriver, microIndStructOffset, 3,
-            eepromAddrBytes);
+                                 eepromAddrBytes);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -784,8 +776,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
         // Write eeprom cmd
         uint8_t eepromCmdByte[1];
         eepromCmdByte[0] = AL_TG_RD_LOC_IND_SRAM;
-        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset+4),
-            eepromCmdByte);
+        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset + 4),
+                                eepromCmdByte);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -804,7 +796,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
         uint8_t count = 0;
         while ((status != 0) && (count < 0xff))
         {
-            rc = ariesReadByteData(i2cDriver, (microIndStructOffset+4), rdata);
+            rc = ariesReadByteData(i2cDriver, (microIndStructOffset + 4),
+                                   rdata);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -828,12 +821,12 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
                 ASTERA_ERROR("Aries lock not released!");
                 return lc;
             }
-            return(ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
+            return (ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
         }
         else
         {
-            rc = ariesReadByteData(i2cDriver, (microIndStructOffset+3),
-                dataByte);
+            rc = ariesReadByteData(i2cDriver, (microIndStructOffset + 3),
+                                   dataByte);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -855,23 +848,19 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Read multiple (up to eight) data bytes from micro SRAM over I2C
  */
 AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t numBytes, uint8_t* values)
 {
     AriesErrorType rc;
     AriesErrorType lc;
 
     if (numBytes > 8)
     {
-        return(ARIES_INVALID_ARGUMENT);
+        return (ARIES_INVALID_ARGUMENT);
     }
     else
     {
@@ -897,8 +886,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
             }
 
             // Set indirect access command
-            tmpValue[0] = ((curRemainingBytes-1) << 5) |
-                  ((((address+curOffset)>>16) & 0x1) << 1);
+            tmpValue[0] = ((curRemainingBytes - 1) << 5) |
+                          ((((address + curOffset) >> 16) & 0x1) << 1);
             rc = ariesWriteByteData(i2cDriver, microIndStructOffset, tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
@@ -913,9 +902,9 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
             }
 
             // Set address upper byte
-            tmpValue[0] = ((address+curOffset)>>8) & 0xff;
-            rc = ariesWriteByteData(i2cDriver, (microIndStructOffset+1),
-                tmpValue);
+            tmpValue[0] = ((address + curOffset) >> 8) & 0xff;
+            rc = ariesWriteByteData(i2cDriver, (microIndStructOffset + 1),
+                                    tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -929,9 +918,9 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
             }
 
             // Set address lower byte (this triggers indirect access)
-            tmpValue[0] = (address+curOffset) & 0xff;
-            rc = ariesWriteByteData(i2cDriver, (microIndStructOffset+2),
-                tmpValue);
+            tmpValue[0] = (address + curOffset) & 0xff;
+            rc = ariesWriteByteData(i2cDriver, (microIndStructOffset + 2),
+                                    tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -950,8 +939,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
             uint8_t count = 0;
             while ((status == 0) && (count < 0xff))
             {
-                rc = ariesReadByteData(i2cDriver, (microIndStructOffset+0xb),
-                      rdata);
+                rc = ariesReadByteData(i2cDriver, (microIndStructOffset + 0xb),
+                                       rdata);
                 // CHECK_SUCCESS(rc);
                 if (rc != ARIES_SUCCESS)
                 {
@@ -974,15 +963,15 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
                     ASTERA_ERROR("Aries lock not released!");
                     return lc;
                 }
-                return(ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
+                return (ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
             }
             else
             {
                 uint8_t i;
                 for (i = 0; i < curRemainingBytes; i++)
                 {
-                    rc = ariesReadByteData(i2cDriver,
-                          (microIndStructOffset+3+i), tmpValue);
+                    rc = ariesReadByteData(
+                        i2cDriver, (microIndStructOffset + 3 + i), tmpValue);
                     // CHECK_SUCCESS(rc);
                     if (rc != ARIES_SUCCESS)
                     {
@@ -1007,16 +996,12 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
     }
 }
 
-
 /*
  * Write multiple (up to eight) data bytes to micro SRAM over I2C
  */
 AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t numBytes, uint8_t* values)
 {
     AriesErrorType rc;
     AriesErrorType lc;
@@ -1036,7 +1021,7 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
         eepromAddrBytes[1] = (eepromAccAddr >> 8) & 0xff;
         eepromAddrBytes[2] = (eepromAccAddr >> 16) & 0xff;
         rc = ariesWriteBlockData(i2cDriver, microIndStructOffset, 3,
-            eepromAddrBytes);
+                                 eepromAddrBytes);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -1051,8 +1036,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
 
         // Write data
         dataByte[0] = values[byteIndex];
-        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset+3),
-            dataByte);
+        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset + 3),
+                                dataByte);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -1068,8 +1053,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
         // Write eeprom cmd
         uint8_t eepromCmdByte[1];
         eepromCmdByte[0] = AL_TG_WR_LOC_IND_SRAM;
-        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset+4),
-            eepromCmdByte);
+        rc = ariesWriteByteData(i2cDriver, (microIndStructOffset + 4),
+                                eepromCmdByte);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -1088,7 +1073,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
         uint8_t count = 0;
         while ((status != 0) && (count < 0xff))
         {
-            rc = ariesReadByteData(i2cDriver, (microIndStructOffset+4), rdata);
+            rc = ariesReadByteData(i2cDriver, (microIndStructOffset + 4),
+                                   rdata);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -1112,7 +1098,7 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
                 ASTERA_ERROR("Aries lock not released!");
                 return lc;
             }
-            return(ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
+            return (ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
         }
     }
 
@@ -1122,16 +1108,12 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write multiple (up to eight) data bytes to micro SRAM over I2C
  */
 AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t numBytes, uint8_t* values)
 {
     uint8_t tmpValue[1];
     uint8_t curOffset = 0;
@@ -1139,7 +1121,7 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
     AriesErrorType lc;
     if (numBytes > 8)
     {
-        return(ARIES_INVALID_ARGUMENT);
+        return (ARIES_INVALID_ARGUMENT);
     }
     else
     {
@@ -1162,8 +1144,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
             }
 
             // Set indirect access command
-            tmpValue[0] = ((curRemainingBytes-1) << 5) |
-                  ((((address+curOffset)>>16) & 0x1) << 1) | 0x1;
+            tmpValue[0] = ((curRemainingBytes - 1) << 5) |
+                          ((((address + curOffset) >> 16) & 0x1) << 1) | 0x1;
             rc = ariesWriteByteData(i2cDriver, microIndStructOffset, tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
@@ -1181,9 +1163,9 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
             uint8_t i;
             for (i = 0; i < curRemainingBytes; i++)
             {
-                tmpValue[0] = values[curOffset+i];
-                rc = ariesWriteByteData(i2cDriver, microIndStructOffset+3+i,
-                      tmpValue);
+                tmpValue[0] = values[curOffset + i];
+                rc = ariesWriteByteData(i2cDriver, microIndStructOffset + 3 + i,
+                                        tmpValue);
                 // CHECK_SUCCESS(rc);
                 if (rc != ARIES_SUCCESS)
                 {
@@ -1198,9 +1180,9 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
             }
 
             // Set address upper byte
-            tmpValue[0] = ((address+curOffset)>>8) & 0xff;
-            rc = ariesWriteByteData(i2cDriver, microIndStructOffset+1,
-                  tmpValue);
+            tmpValue[0] = ((address + curOffset) >> 8) & 0xff;
+            rc = ariesWriteByteData(i2cDriver, microIndStructOffset + 1,
+                                    tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -1214,9 +1196,9 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
             }
 
             // Set address lower byte (this triggers indirect access)
-            tmpValue[0] = (address+curOffset) & 0xff;
-            rc = ariesWriteByteData(i2cDriver, microIndStructOffset+2,
-                  tmpValue);
+            tmpValue[0] = (address + curOffset) & 0xff;
+            rc = ariesWriteByteData(i2cDriver, microIndStructOffset + 2,
+                                    tmpValue);
             // CHECK_SUCCESS(rc);
             if (rc != ARIES_SUCCESS)
             {
@@ -1235,8 +1217,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
             uint8_t count = 0;
             while ((status == 0) && (count < 0xff))
             {
-                rc = ariesReadByteData(i2cDriver, microIndStructOffset+0xb,
-                    rdata);
+                rc = ariesReadByteData(i2cDriver, microIndStructOffset + 0xb,
+                                       rdata);
                 // CHECK_SUCCESS(rc);
                 if (rc != ARIES_SUCCESS)
                 {
@@ -1259,7 +1241,7 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
                     ASTERA_ERROR("Aries lock not released!");
                     return lc;
                 }
-                return(ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
+                return (ARIES_FAILURE_SRAM_IND_ACCESS_TIMEOUT);
             }
             curOffset += curRemainingBytes;
         }
@@ -1271,177 +1253,157 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
     }
 }
 
-
 /*
  * Read a data byte from Main micro SRAM over I2C
  */
-AriesErrorType ariesReadByteDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value)
+AriesErrorType ariesReadByteDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  uint32_t address,
+                                                  uint8_t* value)
 {
     AriesErrorType rc;
 #ifdef ARIES_MPW
     rc = ariesReadBlockDataMainMicroIndirectMPW(i2cDriver, 0xe00, address, 1,
-        value);
+                                                value);
 #else
     rc = ariesReadBlockDataMainMicroIndirectA0(i2cDriver, 0xd99, address, 1,
-        value);
+                                               value);
 #endif
     return rc;
 }
-
 
 /*
  * Read multiple (up to eight) data bytes from Main micro SRAM over I2C
  */
-AriesErrorType ariesReadBlockDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType
+    ariesReadBlockDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint32_t address, uint8_t numBytes,
+                                        uint8_t* values)
 {
     AriesErrorType rc;
 #ifdef ARIES_MPW
     rc = ariesReadBlockDataMainMicroIndirectMPW(i2cDriver, 0xe00, address,
-        numBytes, values);
+                                                numBytes, values);
 #else
     rc = ariesReadBlockDataMainMicroIndirectA0(i2cDriver, 0xd99, address,
-        numBytes, values);
+                                               numBytes, values);
 #endif
     return rc;
 }
-
 
 /*
  * Write a data byte to Main micro SRAM over I2C
  */
-AriesErrorType ariesWriteByteDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value)
+AriesErrorType
+    ariesWriteByteDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint32_t address, uint8_t* value)
 {
     AriesErrorType rc;
 #ifdef ARIES_MPW
     rc = ariesWriteBlockDataMainMicroIndirectMPW(i2cDriver, 0xe00, address, 1,
-        value);
+                                                 value);
 #else
     rc = ariesWriteBlockDataMainMicroIndirectA0(i2cDriver, 0xd99, address, 1,
-        value);
+                                                value);
 #endif
     return rc;
 }
-
 
 /*
  * Write multiple (up to eight) data bytes to Main micro SRAM over I2C
  */
-AriesErrorType ariesWriteBlockDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType
+    ariesWriteBlockDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                         uint32_t address, uint8_t numBytes,
+                                         uint8_t* values)
 {
     AriesErrorType rc;
 #ifdef ARIES_MPW
     rc = ariesWriteBlockDataMainMicroIndirectMPW(i2cDriver, 0xe00, address,
-        numBytes, values);
+                                                 numBytes, values);
 #else
     rc = ariesWriteBlockDataMainMicroIndirectA0(i2cDriver, 0xd99, address,
-        numBytes, values);
+                                                numBytes, values);
 #endif
     return rc;
 }
 
-
 /*
  * Read multiple (up to eight) data bytes from Path micro SRAM over I2C
  */
-AriesErrorType ariesReadBlockDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType
+    ariesReadBlockDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint8_t pathID, uint32_t address,
+                                        uint8_t numBytes, uint8_t* values)
 {
     if (pathID > 15)
     {
-        return(ARIES_INVALID_ARGUMENT);
+        return (ARIES_INVALID_ARGUMENT);
     }
     else
     {
         // uint32_t microIndStructOffset = 0x4200 * pathID;
-        uint32_t microIndStructOffset = 0x4200 + (pathID*ARIES_PATH_WRP_STRIDE);
-        AriesErrorType rc = ariesReadBlockDataMainMicroIndirectMPW(i2cDriver,
-                microIndStructOffset, address, numBytes, values);
+        uint32_t microIndStructOffset = 0x4200 +
+                                        (pathID * ARIES_PATH_WRP_STRIDE);
+        AriesErrorType rc = ariesReadBlockDataMainMicroIndirectMPW(
+            i2cDriver, microIndStructOffset, address, numBytes, values);
         return rc;
     }
 }
-
 
 /*
  * Read a data byte from Path micro SRAM over I2C
  */
-AriesErrorType ariesReadByteDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t* value)
+AriesErrorType ariesReadByteDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  uint8_t pathID,
+                                                  uint32_t address,
+                                                  uint8_t* value)
 {
     AriesErrorType rc = ariesReadBlockDataPathMicroIndirect(i2cDriver, pathID,
-        address, 1, value);
+                                                            address, 1, value);
     return rc;
 }
-
 
 /*
  * Write multiple (up to eight) data bytes to Path micro over I2C
  */
-AriesErrorType ariesWriteBlockDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t numBytes,
-        uint8_t* values)
+AriesErrorType
+    ariesWriteBlockDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                         uint8_t pathID, uint32_t address,
+                                         uint8_t numBytes, uint8_t* values)
 {
     if (pathID > 15)
     {
-        return(ARIES_INVALID_ARGUMENT);
+        return (ARIES_INVALID_ARGUMENT);
     }
     else
     {
-        uint32_t microIndStructOffset = 0x4200 + (pathID*ARIES_PATH_WRP_STRIDE);
-        AriesErrorType rc = ariesWriteBlockDataMainMicroIndirectMPW(i2cDriver,
-            microIndStructOffset, address, numBytes, values);
+        uint32_t microIndStructOffset = 0x4200 +
+                                        (pathID * ARIES_PATH_WRP_STRIDE);
+        AriesErrorType rc = ariesWriteBlockDataMainMicroIndirectMPW(
+            i2cDriver, microIndStructOffset, address, numBytes, values);
         return rc;
     }
 }
 
-
 /*
  * Write a data byte to Path micro SRAM over I2C
  */
-AriesErrorType ariesWriteByteDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t *value)
+AriesErrorType
+    ariesWriteByteDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint8_t pathID, uint32_t address,
+                                        uint8_t* value)
 {
     AriesErrorType rc = ariesWriteBlockDataPathMicroIndirect(i2cDriver, pathID,
-        address, 1, value);
+                                                             address, 1, value);
     return rc;
 }
-
 
 /*
  * Read 2 bytes of data from PMA register over I2C
  */
-AriesErrorType ariesReadWordPmaIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        uint16_t address,
-        uint8_t* values)
+AriesErrorType ariesReadWordPmaIndirect(AriesI2CDriverType* i2cDriver, int side,
+                                        int quadSlice, uint16_t address,
+                                        uint8_t* values)
 {
     uint8_t cmd;
     uint8_t addr15To8;
@@ -1454,7 +1416,7 @@ AriesErrorType ariesReadWordPmaIndirect(
     // Set value for command register based on PMA side
     // A = 1, B = 0
     cmd = 0;
-    if (side == 0)  // B
+    if (side == 0) // B
     {
         cmd |= (0x1 << 1);
     }
@@ -1476,7 +1438,7 @@ AriesErrorType ariesReadWordPmaIndirect(
 
     // Write Cmd reg
     dataByte[0] = cmd;
-    regAddr = ARIES_PMA_QS0_CMD_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_CMD_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1492,7 +1454,7 @@ AriesErrorType ariesReadWordPmaIndirect(
 
     // Write upper bytes of address
     dataByte[0] = addr15To8;
-    regAddr = ARIES_PMA_QS0_ADDR_1_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_ADDR_1_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1508,7 +1470,7 @@ AriesErrorType ariesReadWordPmaIndirect(
 
     // Write lower bytes of address
     dataByte[0] = addr7To0;
-    regAddr = ARIES_PMA_QS0_ADDR_0_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_ADDR_0_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1525,7 +1487,7 @@ AriesErrorType ariesReadWordPmaIndirect(
 
     // Read data (lower and upper bits)
     // Lower bits at data0 and upper bits at data1
-    regAddr = ARIES_PMA_QS0_DATA_0_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_DATA_0_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesReadByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1540,7 +1502,7 @@ AriesErrorType ariesReadWordPmaIndirect(
     }
     values[0] = dataByte[0];
 
-    regAddr = ARIES_PMA_QS0_DATA_1_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_DATA_1_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesReadByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1561,16 +1523,12 @@ AriesErrorType ariesReadWordPmaIndirect(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write 2 bytes of data to PMA register over I2C
  */
-AriesErrorType ariesWriteWordPmaIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        uint16_t address,
-        uint8_t* values)
+AriesErrorType ariesWriteWordPmaIndirect(AriesI2CDriverType* i2cDriver,
+                                         int side, int quadSlice,
+                                         uint16_t address, uint8_t* values)
 {
     uint8_t cmd;
     uint8_t addr15To8;
@@ -1609,7 +1567,7 @@ AriesErrorType ariesWriteWordPmaIndirect(
 
     // Write command reg
     dataByte[0] = cmd;
-    regAddr = ARIES_PMA_QS0_CMD_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_CMD_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1625,7 +1583,7 @@ AriesErrorType ariesWriteWordPmaIndirect(
 
     // Write data word, LSByte (data0) and MSByte (data1)
     dataByte[0] = values[0];
-    regAddr = ARIES_PMA_QS0_DATA_0_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_DATA_0_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     if (rc != ARIES_SUCCESS)
     {
@@ -1639,7 +1597,7 @@ AriesErrorType ariesWriteWordPmaIndirect(
     }
 
     dataByte[0] = values[1];
-    regAddr = ARIES_PMA_QS0_DATA_1_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_DATA_1_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     if (rc != ARIES_SUCCESS)
     {
@@ -1654,7 +1612,7 @@ AriesErrorType ariesWriteWordPmaIndirect(
 
     // Write address (upper bits)
     dataByte[0] = addr15To8;
-    regAddr = ARIES_PMA_QS0_ADDR_1_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_ADDR_1_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1670,7 +1628,7 @@ AriesErrorType ariesWriteWordPmaIndirect(
 
     // Write address (lower bits)
     dataByte[0] = addr7To0;
-    regAddr = ARIES_PMA_QS0_ADDR_0_ADDRESS + (quadSlice*ARIES_QS_STRIDE);
+    regAddr = ARIES_PMA_QS0_ADDR_0_ADDRESS + (quadSlice * ARIES_QS_STRIDE);
     rc = ariesWriteByteData(i2cDriver, regAddr, dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
@@ -1695,20 +1653,16 @@ AriesErrorType ariesWriteWordPmaIndirect(
 /*
  * Read PMA lane registers
  */
-AriesErrorType ariesReadWordPmaLaneIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values)
+AriesErrorType ariesReadWordPmaLaneIndirect(AriesI2CDriverType* i2cDriver,
+                                            int side, int quadSlice, int lane,
+                                            uint16_t regOffset, uint8_t* values)
 {
     AriesErrorType rc;
     uint16_t address;
     if (lane < 4)
     {
         // 0x200 is the lane offset in a PMA
-        address = regOffset + (lane*ARIES_PMA_LANE_STRIDE);
+        address = regOffset + (lane * ARIES_PMA_LANE_STRIDE);
     }
     else
     {
@@ -1717,30 +1671,25 @@ AriesErrorType ariesReadWordPmaLaneIndirect(
         address = regOffset;
     }
 
-    rc = ariesReadWordPmaIndirect(i2cDriver, side, quadSlice, address,
-        values);
+    rc = ariesReadWordPmaIndirect(i2cDriver, side, quadSlice, address, values);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
 }
-
 
 /*
  * Write PMA lane registers
  */
-AriesErrorType ariesWriteWordPmaLaneIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values)
+AriesErrorType ariesWriteWordPmaLaneIndirect(AriesI2CDriverType* i2cDriver,
+                                             int side, int quadSlice, int lane,
+                                             uint16_t regOffset,
+                                             uint8_t* values)
 {
     AriesErrorType rc;
     uint16_t address;
     if (lane < 4)
     {
         // 0x200 is the lane offset in a PMA
-        address = regOffset + (lane*ARIES_PMA_LANE_STRIDE);
+        address = regOffset + (lane * ARIES_PMA_LANE_STRIDE);
     }
     else
     {
@@ -1749,22 +1698,18 @@ AriesErrorType ariesWriteWordPmaLaneIndirect(
         address = regOffset;
     }
 
-    rc = ariesWriteWordPmaIndirect(i2cDriver, side, quadSlice, address,
-        values);
+    rc = ariesWriteWordPmaIndirect(i2cDriver, side, quadSlice, address, values);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Read data from PMA reg via Main Micro
  */
-AriesErrorType ariesReadWordPmaMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        uint16_t pmaAddr,
-        uint8_t* data)
+AriesErrorType ariesReadWordPmaMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                 int side, int qs,
+                                                 uint16_t pmaAddr,
+                                                 uint8_t* data)
 {
     AriesErrorType rc;
     AriesErrorType lc;
@@ -1774,12 +1719,12 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
 
     // Write address (3 bytes)
     uint8_t addr[3];
-    uint32_t address = ((uint32_t) (qs*4) << 20) | (uint32_t) pmaAddr;
+    uint32_t address = ((uint32_t)(qs * 4) << 20) | (uint32_t)pmaAddr;
     addr[0] = address & 0xff;
     addr[1] = (address >> 8) & 0xff;
     addr[2] = (address >> 16) & 0xff;
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_REG_ADDR_OFFSET, 3,
-            addr);
+                             addr);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1804,7 +1749,7 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
     }
 
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_CMD_OFFSET, 1,
-        dataByte);
+                             dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1823,7 +1768,7 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
     while ((status != 0) && (count < 100))
     {
         rc = ariesReadBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_CMD_OFFSET, 1,
-            dataByte);
+                                dataByte);
         // CHECK_SUCCESS(rc);
         if (rc != ARIES_SUCCESS)
         {
@@ -1854,7 +1799,7 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
 
     // Read 2 bytes of data
     rc = ariesReadBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_DATA0_OFFSET, 1,
-        dataByte);
+                            dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1868,7 +1813,7 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
     }
     data[0] = dataByte[0];
     rc = ariesReadBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_DATA1_OFFSET, 1,
-        dataByte);
+                            dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1888,16 +1833,13 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write data to PMA reg via Main Micro
  */
-AriesErrorType ariesWriteWordPmaMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        uint16_t pmaAddr,
-        uint8_t* data)
+AriesErrorType ariesWriteWordPmaMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  int side, int qs,
+                                                  uint16_t pmaAddr,
+                                                  uint8_t* data)
 {
     AriesErrorType rc;
     AriesErrorType lc;
@@ -1909,12 +1851,12 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
 
     // Write address (3 bytes)
     uint8_t addr[3];
-    uint32_t address = ((uint32_t) (qs*4) << 20) | (uint32_t) pmaAddr;
+    uint32_t address = ((uint32_t)(qs * 4) << 20) | (uint32_t)pmaAddr;
     addr[0] = address & 0xff;
     addr[1] = (address >> 8) & 0xff;
     addr[2] = (address >> 16) & 0xff;
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_REG_ADDR_OFFSET, 3,
-            addr);
+                             addr);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1930,7 +1872,7 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
     // Write 2 bytes of data
     dataByte[0] = data[0];
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_DATA0_OFFSET, 1,
-        dataByte);
+                             dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1944,7 +1886,7 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
     }
     dataByte[0] = data[1];
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_DATA1_OFFSET, 1,
-        dataByte);
+                             dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1972,7 +1914,7 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
     }
 
     rc = ariesWriteBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_CMD_OFFSET, 1,
-        dataByte);
+                             dataByte);
     // CHECK_SUCCESS(rc);
     if (rc != ARIES_SUCCESS)
     {
@@ -1991,7 +1933,7 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
     while ((status != 0) && (count < 100))
     {
         rc = ariesReadBlockData(i2cDriver, ARIES_PMA_MM_ASSIST_CMD_OFFSET, 1,
-            dataByte);
+                                dataByte);
         CHECK_SUCCESS(rc);
         status = dataByte[0];
 
@@ -2016,24 +1958,20 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Read PMA lane registers
  */
-AriesErrorType ariesReadWordPmaLaneMainMicroIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values)
+AriesErrorType
+    ariesReadWordPmaLaneMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                          int side, int quadSlice, int lane,
+                                          uint16_t regOffset, uint8_t* values)
 {
     AriesErrorType rc;
     uint16_t address;
     if (lane < 4)
     {
         // 0x200 is the lane offset in a PMA
-        address = regOffset + (lane*ARIES_PMA_LANE_STRIDE);
+        address = regOffset + (lane * ARIES_PMA_LANE_STRIDE);
     }
     else
     {
@@ -2043,29 +1981,25 @@ AriesErrorType ariesReadWordPmaLaneMainMicroIndirect(
     }
 
     rc = ariesReadWordPmaMainMicroIndirect(i2cDriver, side, quadSlice, address,
-        values);
+                                           values);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
 }
 
-
 /*
  * Write PMA lane registers
  */
-AriesErrorType ariesWriteWordPmaLaneMainMicroIndirect(
-        AriesI2CDriverType *i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values)
+AriesErrorType
+    ariesWriteWordPmaLaneMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                           int side, int quadSlice, int lane,
+                                           uint16_t regOffset, uint8_t* values)
 {
     AriesErrorType rc;
     uint16_t address;
     if (lane < 4)
     {
         // 0x200 is the lane offset in a PMA
-        address = regOffset + (lane*ARIES_PMA_LANE_STRIDE);
+        address = regOffset + (lane * ARIES_PMA_LANE_STRIDE);
     }
     else
     {
@@ -2075,7 +2009,7 @@ AriesErrorType ariesWriteWordPmaLaneMainMicroIndirect(
     }
 
     rc = ariesWriteWordPmaMainMicroIndirect(i2cDriver, side, quadSlice, address,
-        values);
+                                            values);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
 }
@@ -2083,18 +2017,14 @@ AriesErrorType ariesWriteWordPmaLaneMainMicroIndirect(
 /**
  * Read N bytes of data from a Retimer (gbl, ln0, or ln1) CSR.
  */
-AriesErrorType ariesReadRetimerRegister(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int lane,
-        uint16_t baseAddr,
-        uint8_t lengthBytes,
-        uint8_t* data)
+AriesErrorType ariesReadRetimerRegister(AriesI2CDriverType* i2cDriver, int side,
+                                        int lane, uint16_t baseAddr,
+                                        uint8_t lengthBytes, uint8_t* data)
 {
     AriesErrorType rc;
     uint8_t ret_pth_ln = lane % 2;
     uint8_t pth_wrap;
-    uint8_t qs = floor(lane/4);
+    uint8_t qs = floor(lane / 4);
     uint32_t addr;
     if (side == 1) // Side "A" - Even paths
     {
@@ -2108,8 +2038,8 @@ AriesErrorType ariesReadRetimerRegister(
     {
         return ARIES_INVALID_ARGUMENT;
     }
-    addr = baseAddr + ret_pth_ln*ARIES_PATH_LANE_STRIDE +
-        pth_wrap*ARIES_PATH_WRP_STRIDE + qs*ARIES_QS_STRIDE;
+    addr = baseAddr + ret_pth_ln * ARIES_PATH_LANE_STRIDE +
+           pth_wrap * ARIES_PATH_WRP_STRIDE + qs * ARIES_QS_STRIDE;
     rc = ariesReadBlockData(i2cDriver, addr, lengthBytes, data);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
@@ -2118,18 +2048,14 @@ AriesErrorType ariesReadRetimerRegister(
 /**
  * Write N bytes of data to a Retimer (gbl, ln0, or ln1) CSR.
  */
-AriesErrorType ariesWriteRetimerRegister(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int lane,
-        uint16_t baseAddr,
-        uint8_t lengthBytes,
-        uint8_t* data)
+AriesErrorType ariesWriteRetimerRegister(AriesI2CDriverType* i2cDriver,
+                                         int side, int lane, uint16_t baseAddr,
+                                         uint8_t lengthBytes, uint8_t* data)
 {
     AriesErrorType rc;
     uint8_t ret_pth_ln = lane % 2;
     uint8_t pth_wrap;
-    uint8_t qs = floor(lane/4);
+    uint8_t qs = floor(lane / 4);
     uint32_t addr;
     if (side == 1) // Side "A" - Even paths
     {
@@ -2143,8 +2069,8 @@ AriesErrorType ariesWriteRetimerRegister(
     {
         return ARIES_INVALID_ARGUMENT;
     }
-    addr = baseAddr + ret_pth_ln*ARIES_PATH_LANE_STRIDE +
-        pth_wrap*ARIES_PATH_WRP_STRIDE + qs*ARIES_QS_STRIDE;
+    addr = baseAddr + ret_pth_ln * ARIES_PATH_LANE_STRIDE +
+           pth_wrap * ARIES_PATH_WRP_STRIDE + qs * ARIES_QS_STRIDE;
     rc = ariesWriteBlockData(i2cDriver, addr, lengthBytes, data);
     CHECK_SUCCESS(rc);
     return ARIES_SUCCESS;
@@ -2153,8 +2079,7 @@ AriesErrorType ariesWriteRetimerRegister(
 /*
  * Lock I2C driver
  */
-AriesErrorType ariesLock(
-        AriesI2CDriverType* i2cDriver)
+AriesErrorType ariesLock(AriesI2CDriverType* i2cDriver)
 {
     AriesErrorType rc;
     rc = 0;
@@ -2171,12 +2096,10 @@ AriesErrorType ariesLock(
     return rc;
 }
 
-
 /*
  * Unlock I2C driver
  */
-AriesErrorType ariesUnlock(
-        AriesI2CDriverType* i2cDriver)
+AriesErrorType ariesUnlock(AriesI2CDriverType* i2cDriver)
 {
     AriesErrorType rc;
     rc = 0;
@@ -2192,7 +2115,6 @@ AriesErrorType ariesUnlock(
 
     return rc;
 }
-
 
 #ifdef __cplusplus
 }

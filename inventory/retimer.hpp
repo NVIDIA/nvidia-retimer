@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,16 @@
 
 #include "rt_util.hpp"
 
-#include <filesystem>
-#include <iostream>
 #include <sdbusplus/bus/match.hpp>
-#include <stdexcept>
 #include <xyz/openbmc_project/Association/Definitions/server.hpp>
 #include <xyz/openbmc_project/Inventory/Decorator/Asset/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/Chassis/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
+
+#include <filesystem>
+#include <iostream>
+#include <stdexcept>
 
 using namespace nvidia::retimer::common;
 
@@ -56,11 +57,10 @@ class Retimer : public RtInherit, public Util
     ~Retimer() = default;
 
     Retimer(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
-        uint8_t address, const std::string& name) :
+            uint8_t address, const std::string& name) :
         RtInherit(bus, (objPath).c_str(), RtInherit::action::defer_emit),
         bus(bus)
     {
-
         b = busN;
         d = address;
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
@@ -98,4 +98,4 @@ class Retimer : public RtInherit, public Util
     std::string inventoryPath;
 };
 
-} // namespace nvidia::cec::device
+} // namespace nvidia::retimer::device

@@ -21,8 +21,8 @@
 #ifndef ASTERA_ARIES_SDK_I2C_H_
 #define ASTERA_ARIES_SDK_I2C_H_
 
-#include "aries_globals.h"
 #include "aries_error.h"
+#include "aries_globals.h"
 #include "astera_log.h"
 
 #ifdef ARIES_MPW
@@ -31,26 +31,30 @@
 #include "aries_a0_reg_defines.h"
 #endif
 
-#include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-#define CHECK_SUCCESS(rc) {\
-    if (rc != ARIES_SUCCESS) {\
-        ASTERA_ERROR("Unexpected return code: %d", rc);\
-        return rc;\
-    }\
-}
+#define CHECK_SUCCESS(rc)                                                      \
+    {                                                                          \
+        if (rc != ARIES_SUCCESS)                                               \
+        {                                                                      \
+            ASTERA_ERROR("Unexpected return code: %d", rc);                    \
+            return rc;                                                         \
+        }                                                                      \
+    }
 
 /**
  * @brief Enumeration of I2C transaction format options for Aries.
  *
  */
-typedef enum AriesI2cFormat {
+typedef enum AriesI2cFormat
+{
     ARIES_I2C_FORMAT_ASTERA, /**< Astera short format read/write transactions */
     ARIES_I2C_FORMAT_INTEL   /**< Intel long format read/write transactions */
 } AriesI2CFormatType;
@@ -59,7 +63,8 @@ typedef enum AriesI2cFormat {
  * @brief Enumeration of Packet Error Checking (PEC) options for Aries
  *
  */
-typedef enum AriesI2cPecEnable {
+typedef enum AriesI2cPecEnable
+{
     ARIES_I2C_PEC_ENABLE, /**< Enable PEC during I2C transactions */
     ARIES_I2C_PEC_DISABLE /**< Disable PEC during I2C transactions */
 } AriesI2CPECEnableType;
@@ -68,20 +73,22 @@ typedef enum AriesI2cPecEnable {
  * @brief Struct defining I2C/SMBus connection with an Aries device.
  *
  */
-typedef struct AriesI2CDriver {
+typedef struct AriesI2CDriver
+{
     int handle;                      /**< File handle to I2C connection */
     int slaveAddr;                   /**< Slave Address */
     AriesI2CFormatType i2cFormat;    /**< I2C format (Astera or Intel) */
     AriesI2CPECEnableType pecEnable; /**< Enable PEC */
-    int lock;                        /** Flag indicating if device reads are locked */
-    bool lockInit;                   /** Flag indicating if lock has been initialized */
+    int lock;      /** Flag indicating if device reads are locked */
+    bool lockInit; /** Flag indicating if lock has been initialized */
 } AriesI2CDriverType;
 
 /**
  * @brief Struct defining FW version loaded on an Aries device.
  *
  */
-typedef struct AriesFWVersion {
+typedef struct AriesFWVersion
+{
     uint8_t major;  /**< FW version major release value */
     uint8_t minor;  /**< FW version minor release value*/
     uint16_t build; /**< FW version build release value*/
@@ -96,9 +103,7 @@ typedef struct AriesFWVersion {
  * @return     int - Error code
  *
  */
-int asteraI2COpenConnection(
-        int i2cBus,
-        int slaveAddress);
+int asteraI2COpenConnection(int i2cBus, int slaveAddress);
 
 /**
  * @brief Low-level I2C write method. THIS FUNCTION MUST BE IMPLEMENTED IN
@@ -120,11 +125,8 @@ int asteraI2COpenConnection(
  * @return     int - Error code
  *
  */
-int asteraI2CWriteBlockData(
-        int handle,
-        uint8_t cmdCode,
-        uint8_t bufLen,
-        uint8_t* buf);
+int asteraI2CWriteBlockData(int handle, uint8_t cmdCode, uint8_t bufLen,
+                            uint8_t* buf);
 
 /**
  * @brief Low-level I2C read method. THIS FUNCTION MUST BE IMPLEMENTED IN
@@ -147,11 +149,8 @@ int asteraI2CWriteBlockData(
  * @return     int - Error code
  *
  */
-int asteraI2CReadBlockData(
-        int handle,
-        uint8_t cmdCode,
-        uint8_t bufLen,
-        uint8_t* buf);
+int asteraI2CReadBlockData(int handle, uint8_t cmdCode, uint8_t bufLen,
+                           uint8_t* buf);
 
 /**
  * @brief Low-level I2C method to implement a lock around I2C transactions such
@@ -162,8 +161,7 @@ int asteraI2CReadBlockData(
  *
  * @return int - Error code
  */
-int asteraI2CBlock(
-        int handle);
+int asteraI2CBlock(int handle);
 
 /**
  * @brief Low-level I2C method to unlock a previous lock around I2C
@@ -174,8 +172,7 @@ int asteraI2CBlock(
  *
  * @return int - Error code
  */
-int asteraI2CUnblock(
-        int handle);
+int asteraI2CUnblock(int handle);
 
 /**
  * @brief Set Slave address to user-specified value: new7bitSmbusAddr
@@ -184,9 +181,7 @@ int asteraI2CUnblock(
  * @param[in] new7bitSmbusAddr  DesiredI2C (7-bit) address of retimer
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesRunArp(
-        int handle,
-        uint8_t new7bitSmbusAddr);
+AriesErrorType ariesRunArp(int handle, uint8_t new7bitSmbusAddr);
 
 /**
  * @brief Write multiple data bytes to Aries over I2C  This function retuns a
@@ -199,11 +194,9 @@ AriesErrorType ariesRunArp(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteBlockData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType ariesWriteBlockData(AriesI2CDriverType* i2cDriver,
+                                   uint32_t address, uint8_t lengthBytes,
+                                   uint8_t* values);
 
 /**
  * @brief Write a data byte at specified address to Aries over I2C. Returns a
@@ -216,10 +209,8 @@ AriesErrorType ariesWriteBlockData(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteByteData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value);
+AriesErrorType ariesWriteByteData(AriesI2CDriverType* i2cDriver,
+                                  uint32_t address, uint8_t* value);
 
 /**
  * @brief Read multiple bytes of data at specified address from Aries over I2C.
@@ -232,11 +223,9 @@ AriesErrorType ariesWriteByteData(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadBlockData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType ariesReadBlockData(AriesI2CDriverType* i2cDriver,
+                                  uint32_t address, uint8_t lengthBytes,
+                                  uint8_t* values);
 
 /**
  * @brief Read a data byte from Aries over I2C
@@ -247,10 +236,8 @@ AriesErrorType ariesReadBlockData(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadByteData(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value);
+AriesErrorType ariesReadByteData(AriesI2CDriverType* i2cDriver,
+                                 uint32_t address, uint8_t* value);
 
 /**
  * @brief Read multiple (up to eight) data bytes from micro SRAM over I2C on A0.
@@ -265,11 +252,8 @@ AriesErrorType ariesReadByteData(
  *
  */
 AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Read multiple (up to eight) data bytes from micro SRAM over I2C.
@@ -284,11 +268,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectA0(
  *
  */
 AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Write multiple data bytes to specified address from micro SRAM over
@@ -303,11 +284,8 @@ AriesErrorType ariesReadBlockDataMainMicroIndirectMPW(
  *
  */
 AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Write multiple (up to eight) data bytes to specified address from
@@ -322,11 +300,8 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectA0(
  *
  */
 AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t microIndStructOffset,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+    AriesI2CDriverType* i2cDriver, uint32_t microIndStructOffset,
+    uint32_t address, uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Read one byte of data from specified address from Main micro SRAM
@@ -339,10 +314,9 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirectMPW(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadByteDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* values);
+AriesErrorType ariesReadByteDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  uint32_t address,
+                                                  uint8_t* values);
 
 /**
  * @brief Read multiple (up to eight) data bytes from speified address from
@@ -356,11 +330,10 @@ AriesErrorType ariesReadByteDataMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadBlockDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType
+    ariesReadBlockDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint32_t address, uint8_t lengthBytes,
+                                        uint8_t* values);
 
 /**
  * @brief Write a data byte at specifed address to Main micro SRAM Aries
@@ -372,10 +345,9 @@ AriesErrorType ariesReadBlockDataMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteByteDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t* value);
+AriesErrorType
+    ariesWriteByteDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint32_t address, uint8_t* value);
 
 /**
  * @brief Write multiple (up to eight) data bytes at specified address to
@@ -389,11 +361,10 @@ AriesErrorType ariesWriteByteDataMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteBlockDataMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType
+    ariesWriteBlockDataMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                         uint32_t address, uint8_t lengthBytes,
+                                         uint8_t* values);
 
 /**
  * @brief Read a data byte at specified address from Path micro SRAM over I2C.
@@ -406,11 +377,10 @@ AriesErrorType ariesWriteBlockDataMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadByteDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t* value);
+AriesErrorType ariesReadByteDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  uint8_t pathID,
+                                                  uint32_t address,
+                                                  uint8_t* value);
 
 /**
  * @brief Read multiple (up to eight) data bytes at specified address from
@@ -425,12 +395,10 @@ AriesErrorType ariesReadByteDataPathMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadBlockDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType
+    ariesReadBlockDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint8_t pathID, uint32_t address,
+                                        uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Write one byte of data byte at specified address to Path micro SRAM
@@ -443,11 +411,10 @@ AriesErrorType ariesReadBlockDataPathMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteByteDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t* value);
+AriesErrorType
+    ariesWriteByteDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                        uint8_t pathID, uint32_t address,
+                                        uint8_t* value);
 
 /**
  * @brief Write multiple (up to eight) data bytes at specified address to
@@ -462,12 +429,10 @@ AriesErrorType ariesWriteByteDataPathMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteBlockDataPathMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        uint8_t pathID,
-        uint32_t address,
-        uint8_t lengthBytes,
-        uint8_t* values);
+AriesErrorType
+    ariesWriteBlockDataPathMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                         uint8_t pathID, uint32_t address,
+                                         uint8_t lengthBytes, uint8_t* values);
 
 /**
  * @brief Read 2 bytes of data from PMA register over I2C
@@ -480,12 +445,9 @@ AriesErrorType ariesWriteBlockDataPathMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadWordPmaIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int quadSlice,
-        uint16_t address,
-        uint8_t* values);
+AriesErrorType ariesReadWordPmaIndirect(AriesI2CDriverType* i2cDriver, int side,
+                                        int quadSlice, uint16_t address,
+                                        uint8_t* values);
 
 /**
  * @brief Write 2 bytes of data from PMA register over I2C
@@ -498,12 +460,9 @@ AriesErrorType ariesReadWordPmaIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteWordPmaIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int quadSlice,
-        uint16_t address,
-        uint8_t* values);
+AriesErrorType ariesWriteWordPmaIndirect(AriesI2CDriverType* i2cDriver,
+                                         int side, int quadSlice,
+                                         uint16_t address, uint8_t* values);
 
 /**
  * @brief Read 2 bytes of data from PMA lane register over I2C
@@ -517,13 +476,10 @@ AriesErrorType ariesWriteWordPmaIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadWordPmaLaneIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values);
+AriesErrorType ariesReadWordPmaLaneIndirect(AriesI2CDriverType* i2cDriver,
+                                            int side, int quadSlice, int lane,
+                                            uint16_t regOffset,
+                                            uint8_t* values);
 
 /**
  * @brief Write 2 bytes of data to PMA lane register over I2C
@@ -537,13 +493,10 @@ AriesErrorType ariesReadWordPmaLaneIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteWordPmaLaneIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int quadSlice,
-        int lane,
-        uint16_t regOffset,
-        uint8_t* values);
+AriesErrorType ariesWriteWordPmaLaneIndirect(AriesI2CDriverType* i2cDriver,
+                                             int side, int quadSlice, int lane,
+                                             uint16_t regOffset,
+                                             uint8_t* values);
 
 /**
  * @brief Read 2 bytes of data from PMA lane register over I2C using the
@@ -558,12 +511,10 @@ AriesErrorType ariesWriteWordPmaLaneIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadWordPmaMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        uint16_t pmaAddr,
-        uint8_t* data);
+AriesErrorType ariesReadWordPmaMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                 int side, int qs,
+                                                 uint16_t pmaAddr,
+                                                 uint8_t* data);
 
 /**
  * @brief Write 2 bytes of data to PMA lane register over I2C using the
@@ -578,12 +529,10 @@ AriesErrorType ariesReadWordPmaMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteWordPmaMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        uint16_t pmaAddr,
-        uint8_t* data);
+AriesErrorType ariesWriteWordPmaMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                                  int side, int qs,
+                                                  uint16_t pmaAddr,
+                                                  uint8_t* data);
 
 /**
  * @brief Read 2 bytes of data from PMA lane register over I2C using the
@@ -599,13 +548,10 @@ AriesErrorType ariesWriteWordPmaMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadWordPmaLaneMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        int lane,
-        uint16_t pmaAddr,
-        uint8_t* data);
+AriesErrorType
+    ariesReadWordPmaLaneMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                          int side, int qs, int lane,
+                                          uint16_t pmaAddr, uint8_t* data);
 
 /**
  * @brief Write 2 bytes of data to PMA lane register over I2C using the
@@ -621,13 +567,10 @@ AriesErrorType ariesReadWordPmaLaneMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteWordPmaLaneMainMicroIndirect(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int qs,
-        int lane,
-        uint16_t pmaAddr,
-        uint8_t* data);
+AriesErrorType
+    ariesWriteWordPmaLaneMainMicroIndirect(AriesI2CDriverType* i2cDriver,
+                                           int side, int qs, int lane,
+                                           uint16_t pmaAddr, uint8_t* data);
 
 /**
  * @brief Read N bytes of data from a Retimer (gbl, ln0, or ln1) CSR.
@@ -641,13 +584,9 @@ AriesErrorType ariesWriteWordPmaLaneMainMicroIndirect(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesReadRetimerRegister(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int lane,
-        uint16_t baseAddr,
-        uint8_t lengthBytes,
-        uint8_t* data);
+AriesErrorType ariesReadRetimerRegister(AriesI2CDriverType* i2cDriver, int side,
+                                        int lane, uint16_t baseAddr,
+                                        uint8_t lengthBytes, uint8_t* data);
 
 /**
  * @brief Write N bytes of data to a Retimer (gbl, ln0, or ln1) CSR.
@@ -661,13 +600,9 @@ AriesErrorType ariesReadRetimerRegister(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesWriteRetimerRegister(
-        AriesI2CDriverType* i2cDriver,
-        int side,
-        int lane,
-        uint16_t baseAddr,
-        uint8_t lengthBytes,
-        uint8_t* data);
+AriesErrorType ariesWriteRetimerRegister(AriesI2CDriverType* i2cDriver,
+                                         int side, int lane, uint16_t baseAddr,
+                                         uint8_t lengthBytes, uint8_t* data);
 
 /**
  * @brief Set lock on bus (Aries transaction)
@@ -676,8 +611,7 @@ AriesErrorType ariesWriteRetimerRegister(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesLock(
-        AriesI2CDriverType* i2cDriver);
+AriesErrorType ariesLock(AriesI2CDriverType* i2cDriver);
 
 /**
  * @brief Unlock bus after lock (Aries transaction)
@@ -686,9 +620,7 @@ AriesErrorType ariesLock(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesUnlock(
-        AriesI2CDriverType* i2cDriver);
-
+AriesErrorType ariesUnlock(AriesI2CDriverType* i2cDriver);
 
 #ifdef __cplusplus
 }

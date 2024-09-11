@@ -24,23 +24,23 @@
 #include <stdio.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /**
  * @brief Struct defining paramaters for a given link inside link set
-*/
+ */
 typedef struct AriesBifurcationLinkParams
 {
-    int startLane;  /**< Start lane for a link */
-    int linkWidth;  /**< Width of a this link */
-    int linkId;     /**< Link num inside link set */
+    int startLane; /**< Start lane for a link */
+    int linkWidth; /**< Width of a this link */
+    int linkId;    /**< Link num inside link set */
 } AriesBifurcationLinkParamsType;
-
 
 /**
  * @brief Struct defining paramaters for the entire link
-*/
+ */
 typedef struct AriesBifurcationParams
 {
     int numLinks; /**< Num links part of this link set */

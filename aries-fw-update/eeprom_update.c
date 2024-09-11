@@ -18,8 +18,8 @@
  * @brief Example application to update the EEPROM image through Aries.
  */
 
-#include "include/aries_api.h"
 #include "aspeed.h"
+#include "include/aries_api.h"
 
 #include <unistd.h>
 
@@ -40,7 +40,8 @@ int main(int argc, char* argv[])
     // Enable SDK-level debug prints
     asteraLogSetLevel(1); // ASTERA_INFO type statements (or higher)
 
-    if (argc < 4) {
+    if (argc < 4)
+    {
         printf("USAGE: %s i2cbus devaddr fwfile\n", argv[0]);
         exit(-1);
     }
@@ -48,7 +49,8 @@ int main(int argc, char* argv[])
     i2cBus = strtol(argv[1], NULL, 0);
     ariesSlaveAddress = strtol(argv[2], NULL, 0);
 
-    if ((i2cBus == 0)||(ariesSlaveAddress == 0)) {
+    if ((i2cBus == 0) || (ariesSlaveAddress == 0))
+    {
         printf("i2cbus or devaddr invalid\n");
         exit(-2);
     }
@@ -57,7 +59,7 @@ int main(int argc, char* argv[])
     ariesHandle = asteraI2COpenConnection(i2cBus, ariesSlaveAddress);
 
     // Initialize I2C Driver for SDK transactions
-    i2cDriver = (AriesI2CDriverType*) malloc(sizeof(AriesI2CDriverType));
+    i2cDriver = (AriesI2CDriverType*)malloc(sizeof(AriesI2CDriverType));
     i2cDriver->handle = ariesHandle;
     i2cDriver->slaveAddr = ariesSlaveAddress;
     i2cDriver->pecEnable = ARIES_I2C_PEC_DISABLE;
@@ -67,7 +69,7 @@ int main(int argc, char* argv[])
     i2cDriver->lockInit = 0;
 
     // Initialize Aries device structure
-    ariesDevice = (AriesDeviceType*) malloc(sizeof(AriesDeviceType));
+    ariesDevice = (AriesDeviceType*)malloc(sizeof(AriesDeviceType));
     ariesDevice->i2cDriver = i2cDriver;
     ariesDevice->i2cBus = i2cBus;
     ariesDevice->partNumber = ARIES_PTX16;
@@ -119,7 +121,7 @@ int main(int argc, char* argv[])
 
     // Print new FW version
     ASTERA_INFO("Updated FW Version is %d.%d.%d", ariesDevice->fwVersion.major,
-        ariesDevice->fwVersion.minor, ariesDevice->fwVersion.build);
+                ariesDevice->fwVersion.minor, ariesDevice->fwVersion.build);
 
     // Close all open connections
     closeI2CConnection(ariesHandle);

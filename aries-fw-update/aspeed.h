@@ -21,14 +21,14 @@
 #ifndef ASTERA_ARIES_SDK_ASPEED_H_
 #define ASTERA_ARIES_SDK_ASPEED_H_
 
+#include <errno.h>
+#include <fcntl.h>
+#include <i2c/smbus.h>
+#include <linux/i2c-dev.h> // linux library included on A-Speed
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
-#include <linux/i2c-dev.h>   // linux library included on A-Speed
-#include <i2c/smbus.h>
 
 /**
  * @brief: Set I2C slave address

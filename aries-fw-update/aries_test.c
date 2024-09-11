@@ -22,8 +22,8 @@
  *        - Getting the FW version
  */
 
-#include "include/aries_api.h"
 #include "aspeed.h"
+#include "include/aries_api.h"
 
 #include <unistd.h>
 
@@ -44,7 +44,8 @@ int main(int argc, char* argv[])
     // Enable SDK-level debug prints
     asteraLogSetLevel(1); // ASTERA_DEBUG type statements (or higher)
 
-    if (argc < 3) {
+    if (argc < 3)
+    {
         printf("USAGE: %s bus slaveaddr\n", argv[0]);
         exit(-1);
     }
@@ -52,7 +53,8 @@ int main(int argc, char* argv[])
     i2cBus = strtol(argv[1], NULL, 0);
     ariesSlaveAddress = strtol(argv[2], NULL, 0);
 
-    if ((i2cBus == 0)||(ariesSlaveAddress == 0)) {
+    if ((i2cBus == 0) || (ariesSlaveAddress == 0))
+    {
         printf("Invalid bus or slave address\n");
         exit(-2);
     }
@@ -61,7 +63,7 @@ int main(int argc, char* argv[])
     ariesHandle = asteraI2COpenConnection(i2cBus, ariesSlaveAddress);
 
     // Initialize I2C Driver for SDK transactions
-    i2cDriver = (AriesI2CDriverType*) malloc(sizeof(AriesI2CDriverType));
+    i2cDriver = (AriesI2CDriverType*)malloc(sizeof(AriesI2CDriverType));
     i2cDriver->handle = ariesHandle;
     i2cDriver->slaveAddr = ariesSlaveAddress;
     i2cDriver->pecEnable = ARIES_I2C_PEC_DISABLE;
@@ -71,7 +73,7 @@ int main(int argc, char* argv[])
     i2cDriver->lockInit = 0;
 
     // Initialize Aries device structure
-    ariesDevice = (AriesDeviceType*) malloc(sizeof(AriesDeviceType));
+    ariesDevice = (AriesDeviceType*)malloc(sizeof(AriesDeviceType));
     ariesDevice->i2cDriver = i2cDriver;
     ariesDevice->i2cBus = i2cBus;
     ariesDevice->partNumber = ARIES_PTX16;
@@ -96,7 +98,7 @@ int main(int argc, char* argv[])
 
     // Print FW version
     ASTERA_INFO("FW Version: %d.%d.%d", ariesDevice->fwVersion.major,
-        ariesDevice->fwVersion.minor, ariesDevice->fwVersion.build);
+                ariesDevice->fwVersion.minor, ariesDevice->fwVersion.build);
 
     uint8_t dataBytes[4];
     rc = ariesReadBlockData(i2cDriver, 0, 4, dataBytes);
@@ -105,8 +107,8 @@ int main(int argc, char* argv[])
         ASTERA_ERROR("Failed to read gbl_param_reg0");
         return rc;
     }
-    int glb_param_reg0 = (dataBytes[3]<<24) + (dataBytes[2] <<16)
-        + (dataBytes[1]<<8) + dataBytes[0];
+    int glb_param_reg0 = (dataBytes[3] << 24) + (dataBytes[2] << 16) +
+                         (dataBytes[1] << 8) + dataBytes[0];
     ASTERA_INFO("glb_param_reg0 = 0x%08x", glb_param_reg0);
 
     /*Read Temperature*/

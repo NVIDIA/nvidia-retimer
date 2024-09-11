@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,14 @@
 #include <fmt/format.h>
 #include <unistd.h>
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/elog-errors.hpp>
 #include <phosphor-logging/elog.hpp>
 #include <phosphor-logging/log.hpp>
+
+#include <algorithm>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -80,8 +81,7 @@ inline std::vector<std::string> executeCmd(T&& path, Types... args)
 
     std::string cmd = path + getCommand(args...);
 
-    std::unique_ptr<FILE, int (*)(FILE*)> pipe(popen(cmd.c_str(), "r"),
-                                                  pclose);
+    std::unique_ptr<FILE, int (*)(FILE*)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe)
     {
         throw std::runtime_error("popen() failed!");
@@ -100,9 +100,7 @@ inline bool invalidChar(char c)
 }
 inline void stripUnicode(std::string& str)
 {
-    str.erase(std::remove_if(str.begin(), str.end(),
-                             invalidChar),
-              str.end());
+    str.erase(std::remove_if(str.begin(), str.end(), invalidChar), str.end());
 }
 class Util
 {
@@ -123,9 +121,8 @@ class Util
         std::string s = "";
         try
         {
-            std::string cmd =
-                fmt::format("aries-info {0:s} {1:d} {2:#02x}",
-                            command, b, d);
+            std::string cmd = fmt::format("aries-info {0:s} {1:d} {2:#02x}",
+                                          command, b, d);
             auto output = executeCmd(cmd);
             for (const auto& i : output)
                 s += i;
@@ -160,4 +157,4 @@ class Util
         return runCommand("version");
     }
 };
-} // namespace nvidia::cec::common
+} // namespace nvidia::retimer::common

@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-
-
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <sys/ioctl.h>
@@ -172,15 +170,16 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error opening file: %s\n",
 				strerror(errno));
 			prepareMessageRegistry(
-				retimerToUpdate, "VerificationFailed", versionStr,
-				MSG_REG_VER_FOLLOWED_BY_DEV,
+				retimerToUpdate, "VerificationFailed",
+				versionStr, MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
 			goto exit;
 		}
 
 		if (fstat(imagefd, &st)) {
-			fprintf(stderr, "\nfstat error: [%s]\n", strerror(errno));
+			fprintf(stderr, "\nfstat error: [%s]\n",
+				strerror(errno));
 			prepareMessageRegistry(
 				retimerToUpdate, "TransferFailed", versionStr,
 				MSG_REG_VER_FOLLOWED_BY_DEV,
@@ -189,7 +188,8 @@ int main(int argc, char *argv[])
 			goto exit;
 		}
 		fw_size = st.st_size;
-		imageMappedAddr = mmap(NULL, fw_size, PROT_READ, MAP_PRIVATE, imagefd, 0);
+		imageMappedAddr =
+			mmap(NULL, fw_size, PROT_READ, MAP_PRIVATE, imagefd, 0);
 		if (imageMappedAddr == MAP_FAILED) {
 			perror("Memory-mapping of FW image for processing failed");
 			prepareMessageRegistry(
@@ -204,12 +204,13 @@ int main(int argc, char *argv[])
 		imagefd = -1;
 
 		ret = parseCompositeImage(imageMappedAddr, fw_size, versionStr,
-			&update_ops, &update_ops_count);
+					  &update_ops, &update_ops_count);
 		if (ret) {
-			fprintf(stderr, "parseCompositeImage returned: [%d]\n", ret);
+			fprintf(stderr, "parseCompositeImage returned: [%d]\n",
+				ret);
 			prepareMessageRegistry(
-				retimerToUpdate, "VerificationFailed", versionStr,
-				MSG_REG_VER_FOLLOWED_BY_DEV,
+				retimerToUpdate, "VerificationFailed",
+				versionStr, MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
 			goto exit;
@@ -219,11 +220,12 @@ int main(int argc, char *argv[])
 		// if update_ops_count > 0 and we did not get the array.
 		if (update_ops_count > 0 && !update_ops) {
 			ret = -ERROR_UNKNOWN;
-			fprintf(stderr, "update_ops_count is %d but update_ops is NULL\n",
+			fprintf(stderr,
+				"update_ops_count is %d but update_ops is NULL\n",
 				update_ops_count);
 			prepareMessageRegistry(
-				retimerToUpdate, "VerificationFailed", versionStr,
-				MSG_REG_VER_FOLLOWED_BY_DEV,
+				retimerToUpdate, "VerificationFailed",
+				versionStr, MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Critical",
 				NULL, 0);
 			goto exit;
@@ -232,10 +234,12 @@ int main(int argc, char *argv[])
 		// Composite and bare images reconverge here with update_operations filled in
 		// Perform target filtering intersection and log TargetDetermined logs
 		for (int uo = 0; uo < update_ops_count; uo++) {
-			fprintf(stdout, "update operation %d, startOffset %#zx, " \
-				"imageLength %zu, applyBitmap %#x, actual bitmap %#x, " \
+			fprintf(stdout,
+				"update operation %d, startOffset %#zx, "
+				"imageLength %zu, applyBitmap %#x, actual bitmap %#x, "
 				"imageCrc %#x, versionString %s\n",
-				uo, update_ops[uo].startOffset, update_ops[uo].imageLength,
+				uo, update_ops[uo].startOffset,
+				update_ops[uo].imageLength,
 				update_ops[uo].applyBitmap,
 				update_ops[uo].applyBitmap & retimerToUpdate,
 				update_ops[uo].imageCrc,
@@ -243,7 +247,8 @@ int main(int argc, char *argv[])
 			update_ops[uo].applyBitmap &= retimerToUpdate;
 			prepareMessageRegistry(
 				update_ops[uo].applyBitmap, "TargetDetermined",
-				update_ops[uo].versionString, MSG_REG_DEV_FOLLOWED_BY_VER,
+				update_ops[uo].versionString,
+				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Informational",
 				NULL, 0);
 		}
@@ -251,25 +256,33 @@ int main(int argc, char *argv[])
 		for (int uo = 0; uo < update_ops_count; uo++) {
 			fprintf(stderr, "performing update_ops[%d]\n", uo);
 			if (!update_ops[uo].applyBitmap) {
-				fprintf(stdout, "applyBitmap for update_ops[%d] is 0, skipping\n", uo);
+				fprintf(stdout,
+					"applyBitmap for update_ops[%d] is 0, skipping\n",
+					uo);
 				continue;
 			}
 			prepareMessageRegistry(
-				update_ops[uo].applyBitmap, "TransferringToComponent",
-				update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+				update_ops[uo].applyBitmap,
+				"TransferringToComponent",
+				update_ops[uo].versionString,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Informational",
 				NULL, 0);
 
-			ret = copyImageFromMemToFpga(imageMappedAddr + update_ops[uo].startOffset,
-				update_ops[uo].imageLength, update_ops[uo].imageCrc, fd,
+			ret = copyImageFromMemToFpga(
+				imageMappedAddr + update_ops[uo].startOffset,
+				update_ops[uo].imageLength,
+				update_ops[uo].imageCrc, fd,
 				FPGA_I2C_CNTRL_ADDR);
 			if (ret) {
 				fprintf(stderr,
 					"FW Update FW image copy to FPGA failed  error code%d!!!\n",
 					ret);
 				prepareMessageRegistry(
-					update_ops[uo].applyBitmap, "TransferFailed",
-					update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+					update_ops[uo].applyBitmap,
+					"TransferFailed",
+					update_ops[uo].versionString,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
 				updateFirstErrRet = ret;
@@ -277,30 +290,39 @@ int main(int argc, char *argv[])
 			}
 
 			// Trigger FW Update to one or more retimer at a time and monitor the update progress and its completion
-			ret = startRetimerFwUpdate(fd, update_ops[uo].applyBitmap,
-						update_ops[uo].versionString, &retimerNotUpdated);
+			ret = startRetimerFwUpdate(fd,
+						   update_ops[uo].applyBitmap,
+						   update_ops[uo].versionString,
+						   &retimerNotUpdated);
 			if (ret) {
 				fprintf(stderr,
-					"FW Update for Retimer %d failed for retimer with error code " \
+					"FW Update for Retimer %d failed for retimer with error code "
 					"%d retimerNotUpdated %d!!!\n",
-					update_ops[uo].applyBitmap, ret, retimerNotUpdated);
+					update_ops[uo].applyBitmap, ret,
+					retimerNotUpdated);
 				prepareMessageRegistry(
-					retimerNotUpdated, "ApplyFailed", update_ops[uo].versionString,
+					retimerNotUpdated, "ApplyFailed",
+					update_ops[uo].versionString,
 					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
 
-				if (update_ops[uo].applyBitmap ^ retimerNotUpdated) {
+				if (update_ops[uo].applyBitmap ^
+				    retimerNotUpdated) {
 					prepareMessageRegistry(
-						(update_ops[uo].applyBitmap ^ retimerNotUpdated),
-						"UpdateSuccessful", update_ops[uo].versionString,
+						(update_ops[uo].applyBitmap ^
+						 retimerNotUpdated),
+						"UpdateSuccessful",
+						update_ops[uo].versionString,
 						MSG_REG_DEV_FOLLOWED_BY_VER,
 						"xyz.openbmc_project.Logging.Entry.Level.Informational",
 						NULL, 0);
 
 					prepareMessageRegistry(
-						(update_ops[uo].applyBitmap ^ retimerNotUpdated),
-						"AwaitToActivate", update_ops[uo].versionString,
+						(update_ops[uo].applyBitmap ^
+						 retimerNotUpdated),
+						"AwaitToActivate",
+						update_ops[uo].versionString,
 						MSG_REG_VER_FOLLOWED_BY_DEV,
 						"xyz.openbmc_project.Logging.Entry.Level.Informational",
 						"AC power cycle", 0);
@@ -310,13 +332,15 @@ int main(int argc, char *argv[])
 			}
 			prepareMessageRegistry(
 				update_ops[uo].applyBitmap, "UpdateSuccessful",
-				update_ops[uo].versionString, MSG_REG_DEV_FOLLOWED_BY_VER,
+				update_ops[uo].versionString,
+				MSG_REG_DEV_FOLLOWED_BY_VER,
 				"xyz.openbmc_project.Logging.Entry.Level.Informational",
 				NULL, 0);
 
 			prepareMessageRegistry(
 				update_ops[uo].applyBitmap, "AwaitToActivate",
-				update_ops[uo].versionString, MSG_REG_VER_FOLLOWED_BY_DEV,
+				update_ops[uo].versionString,
+				MSG_REG_VER_FOLLOWED_BY_DEV,
 				"xyz.openbmc_project.Logging.Entry.Level.Informational",
 				"AC power cycle", 0);
 		}
@@ -392,7 +416,8 @@ exit:
 	if (dummyfd != -1) {
 		close(dummyfd);
 	}
-	if (imageMappedAddr != NULL && imageMappedAddr != MAP_FAILED && st.st_size >= 0) {
+	if (imageMappedAddr != NULL && imageMappedAddr != MAP_FAILED &&
+	    st.st_size >= 0) {
 		munmap((void *)imageMappedAddr, st.st_size);
 	}
 	if (update_ops) {

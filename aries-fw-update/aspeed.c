@@ -23,52 +23,50 @@
 
 #include <sys/ioctl.h>
 
-int asteraI2COpenConnection(
-        int i2cBus,
-        int slaveAddress)
+int asteraI2COpenConnection(int i2cBus, int slaveAddress)
 {
-        int file;
-        int quiet = 0;
-        char filename[20];
-        int size = sizeof(filename);
+    int file;
+    int quiet = 0;
+    char filename[20];
+    int size = sizeof(filename);
 
-        snprintf(filename, size, "/dev/i2c/%d", i2cBus);
-        filename[size - 1] = '\0';
+    snprintf(filename, size, "/dev/i2c/%d", i2cBus);
+    filename[size - 1] = '\0';
+    file = open(filename, O_RDWR);
+
+    if (file < 0 && (errno == ENOENT || errno == ENOTDIR))
+    {
+        sprintf(filename, "/dev/i2c-%d", i2cBus);
         file = open(filename, O_RDWR);
+    }
 
-        if (file < 0 && (errno == ENOENT || errno == ENOTDIR))
+    if (file < 0 && !quiet)
+    {
+        if (errno == ENOENT)
         {
-                sprintf(filename, "/dev/i2c-%d", i2cBus);
-                file = open(filename, O_RDWR);
+            fprintf(stderr,
+                    "Error: Could not open file "
+                    "`/dev/i2c-%d' or `/dev/i2c/%d': %s\n",
+                    i2cBus, i2cBus, strerror(ENOENT));
         }
-
-        if (file < 0 && !quiet)
+        else
         {
-                if (errno == ENOENT)
-                {
-                        fprintf(stderr, "Error: Could not open file "
-                                "`/dev/i2c-%d' or `/dev/i2c/%d': %s\n",
-                                i2cBus, i2cBus, strerror(ENOENT));
-                }
-                else
-                {
-                        fprintf(stderr, "Error: Could not open file "
-                                "`%s': %s\n", filename, strerror(errno));
-                        if (errno == EACCES)
-                        {
-                            fprintf(stderr, "Run as root?\n");
-                        }
-                }
+            fprintf(stderr,
+                    "Error: Could not open file "
+                    "`%s': %s\n",
+                    filename, strerror(errno));
+            if (errno == EACCES)
+            {
+                fprintf(stderr, "Run as root?\n");
+            }
         }
-        setSlaveAddress(file, slaveAddress, 0);
-        return file;
+    }
+    setSlaveAddress(file, slaveAddress, 0);
+    return file;
 }
 
-int asteraI2CWriteBlockData(
-        int handle,
-        uint8_t cmdCode,
-        uint8_t numBytes,
-        uint8_t* buf)
+int asteraI2CWriteBlockData(int handle, uint8_t cmdCode, uint8_t numBytes,
+                            uint8_t* buf)
 {
     int r = i2c_smbus_write_i2c_block_data(handle, cmdCode, numBytes, buf);
     /* function can return positive on success, APIs don't expect that */
@@ -77,48 +75,38 @@ int asteraI2CWriteBlockData(
     return 0;
 }
 
-int asteraI2CReadBlockData(
-        int handle,
-        uint8_t cmdCode,
-        uint8_t numBytes,
-        uint8_t* buf)
+int asteraI2CReadBlockData(int handle, uint8_t cmdCode, uint8_t numBytes,
+                           uint8_t* buf)
 {
     return i2c_smbus_read_i2c_block_data(handle, cmdCode, numBytes, buf);
 }
 
-int asteraI2CBlock(
-        int handle)
+int asteraI2CBlock(int handle)
 {
     (void)handle;
-    return 0;    // Equivalent to ARIES_SUCCESS
+    return 0; // Equivalent to ARIES_SUCCESS
 }
 
-int asteraI2CUnblock(
-        int handle)
+int asteraI2CUnblock(int handle)
 {
     (void)handle;
-    return 0;    // Equivalent to ARIES_SUCCESS
+    return 0; // Equivalent to ARIES_SUCCESS
 }
-
 
 /*
  * Set I2C Slave address
  */
-int setSlaveAddress(
-        int file,
-        int address,
-        int force)
+int setSlaveAddress(int file, int address, int force)
 {
-        /* With force, let the user read from/write to the registers
-           even when a driver is also running */
-        if (ioctl(file, force ? I2C_SLAVE_FORCE : I2C_SLAVE, address) < 0)
-        {
-                fprintf(stderr,
-                        "Error: Could not set address to 0x%02x: %s\n",
-                        address, strerror(errno));
-                return -errno;
-        }
-        return 0;
+    /* With force, let the user read from/write to the registers
+       even when a driver is also running */
+    if (ioctl(file, force ? I2C_SLAVE_FORCE : I2C_SLAVE, address) < 0)
+    {
+        fprintf(stderr, "Error: Could not set address to 0x%02x: %s\n", address,
+                strerror(errno));
+        return -errno;
+    }
+    return 0;
 }
 
 /*

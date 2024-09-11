@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
  */
 
 #pragma once
-#include <iomanip>
-#include <iostream>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <sdeventplus/event.hpp>
+
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 
 struct DBusMapping
@@ -39,8 +40,8 @@ const std::string retimerSwitchesPath = "/Switches/PCIeRetimer_";
 const std::string retimerInventoryPath =
     "/xyz/openbmc_project/inventory/system/chassis/HGX_PCIeRetimer_";
 const std::string retimerFWInventoryBasePath = "/xyz/openbmc_project/software/";
-const std::string retimerFWInventoryPath =
-    retimerFWInventoryBasePath + "HGX_FW_PCIeRetimer_";
+const std::string retimerFWInventoryPath = retimerFWInventoryBasePath +
+                                           "HGX_FW_PCIeRetimer_";
 constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
 constexpr auto switchInterface = "xyz.openbmc_project.Inventory.Item.Switch";
 constexpr auto assetInterface = "xyz.openbmc_project.Inventory.Decorator.Asset";
@@ -48,7 +49,6 @@ constexpr auto versionInterface = "xyz.openbmc_project.Software.Version";
 constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
 constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
 constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
-
 
 using PropertyValue = std::variant<std::string>;
 using Interface = std::string;
@@ -61,13 +61,13 @@ using InterfaceMap = std::map<Interface, PropertyMap>;
 
 class RetimerApp
 {
-public:
+  public:
     /**
      * @brief Construct a new Retimer app object
      *
      * @param[in] bus
      */
-    RetimerApp(sdbusplus::bus::bus &bus) : bus(bus) {}
+    RetimerApp(sdbusplus::bus::bus& bus) : bus(bus) {}
 
     /**
      * @brief Get D-Bus service
@@ -75,8 +75,7 @@ public:
      * @param[in] path
      * @param[in] interface
      */
-    std::string getService(const char* path,
-                                    const char* interface) const;
+    std::string getService(const char* path, const char* interface) const;
 
     /**
      * @brief Get the Retimer Switch D-Bus object
@@ -91,7 +90,7 @@ public:
      * @param[in] dbusMap
      * @param[in] value
      */
-    void getDBusProperty(const DBusMapping &dbusMap, std::string &value);
+    void getDBusProperty(const DBusMapping& dbusMap, std::string& value);
 
     /**
      * @brief Set property of D-Bus object
@@ -99,31 +98,31 @@ public:
      * @param[in] dbusMap
      * @param[in] value
      */
-    void setDBusProperty(const DBusMapping &dbusMap, const std::string &value);
+    void setDBusProperty(const DBusMapping& dbusMap, const std::string& value);
 
     /**
-     * @brief get SKU id for retimer. SKU ID is formed by concatenating device and
-     * vendor Id both are of size 2 bytes and leading zeros is added to make sure
-     * SKU is always 4 bytes
+     * @brief get SKU id for retimer. SKU ID is formed by concatenating device
+     * and vendor Id both are of size 2 bytes and leading zeros is added to make
+     * sure SKU is always 4 bytes
      *
      * @param[in] objPath - retimer device object path
      * @return std::string - SKU property
      */
-    std::string getSKUId(const std::string &objPath);
+    std::string getSKUId(const std::string& objPath);
 
     /**
      * @brief switch object callback
      *
      * @param[in] m - message
      */
-    void softwareObjectCallback(sdbusplus::message::message &m);
+    void softwareObjectCallback(sdbusplus::message::message& m);
 
     /**
      * @brief switch object callback
      *
      * @param[in] m - message
      */
-    void switchObjectCallback(sdbusplus::message::message &m);
+    void switchObjectCallback(sdbusplus::message::message& m);
 
     /**
      * @brief add event listener in nvswitch and software id path
@@ -133,8 +132,8 @@ public:
      */
     void listenForGPUManagerEvents();
 
-private:
-    sdbusplus::bus::bus &bus;
+  private:
+    sdbusplus::bus::bus& bus;
     std::unique_ptr<sdbusplus::bus::match_t> switchObjectAddedMatch;
     std::unique_ptr<sdbusplus::bus::match_t> softwareObjectAddedMatch;
 };

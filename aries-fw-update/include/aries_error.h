@@ -22,7 +22,8 @@
 #define ASTERA_ARIES_SDK_ERROR_H_
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Used to avoid warnings in case of unused parameters in function pointers */
@@ -81,7 +82,7 @@ typedef enum
     ARIES_EEPROM_CRC_BLOCK_NUM_FAIL = -14,
     /** EEPROM CRC BLOCK BYTE FAIL */
     ARIES_EEPROM_CRC_BYTE_FAIL = -15,
-    
+
     /** Function's operation was unsuccessful */
     ARIES_FUNCTION_UNSUCCESSFUL = -16
 } AriesErrorType;

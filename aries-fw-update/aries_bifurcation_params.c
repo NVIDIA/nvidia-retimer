@@ -21,7 +21,8 @@
 #include "include/aries_bifurcation_params.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 AriesBifurcationParamsType bifurcationModes[36] = {
@@ -40,8 +41,15 @@ AriesBifurcationParamsType bifurcationModes[36] = {
     /**< Bifurcation properties for x4x4x4x4 */
     {4, {{0, 4, 0}, {4, 4, 1}, {8, 4, 2}, {12, 4, 3}}},
     /**< Bifurcation properties for x2x2x2x2x2x2x2x2 */
-    {8, {{0, 2, 0}, {2, 2, 1}, {4, 2, 2}, {6, 2, 3}, {8, 2, 4}, {10, 2, 5},
-        {12, 2, 6}, {14, 2, 7}}},
+    {8,
+     {{0, 2, 0},
+      {2, 2, 1},
+      {4, 2, 2},
+      {6, 2, 3},
+      {8, 2, 4},
+      {10, 2, 5},
+      {12, 2, 6},
+      {14, 2, 7}}},
     /**< Bifurcation properties for x2x2x4x8 */
     {4, {{0, 2, 0}, {2, 2, 1}, {4, 4, 2}, {8, 8, 3}}},
     /**< Bifurcation properties for x4x2x2x8 */
@@ -75,17 +83,41 @@ AriesBifurcationParamsType bifurcationModes[36] = {
     /**< Bifurcation properties for x4x4x4x4x2x2 */
     {6, {{0, 4, 0}, {4, 4, 1}, {8, 4, 2}, {12, 4, 3}, {16, 2, 4}, {18, 2, 5}}},
     /**< Bifurcation properties for x4x2x2x2x2x2x2 */
-    {7, {{0, 4, 0}, {4, 2, 1}, {6, 2, 2}, {8, 2, 3}, {10, 2, 4}, {12, 2, 5},
-        {14, 2, 6}}},
+    {7,
+     {{0, 4, 0},
+      {4, 2, 1},
+      {6, 2, 2},
+      {8, 2, 3},
+      {10, 2, 4},
+      {12, 2, 5},
+      {14, 2, 6}}},
     /**< Bifurcation properties for x2x2x4x2x2x2x2 */
-    {7, {{0, 2, 0}, {2, 2, 1}, {4, 4, 2}, {8, 2, 3}, {10, 2, 4}, {12, 2, 5},
-        {14, 2, 6}}},
+    {7,
+     {{0, 2, 0},
+      {2, 2, 1},
+      {4, 4, 2},
+      {8, 2, 3},
+      {10, 2, 4},
+      {12, 2, 5},
+      {14, 2, 6}}},
     /**< Bifurcation properties for x2x2x2x2x4x2x2 */
-    {7, {{0, 2, 0}, {2, 2, 1}, {4, 2, 2}, {6, 2, 3}, {8, 4, 4}, {12, 2, 5},
-        {14, 2, 6}}},
+    {7,
+     {{0, 2, 0},
+      {2, 2, 1},
+      {4, 2, 2},
+      {6, 2, 3},
+      {8, 4, 4},
+      {12, 2, 5},
+      {14, 2, 6}}},
     /**< Bifurcation properties for x2x2x2x2x2x2x4 */
-    {7, {{0, 2, 0}, {2, 2, 1}, {4, 2, 2}, {6, 2, 3}, {8, 2, 4}, {10, 2, 5},
-        {12, 4, 6}}},
+    {7,
+     {{0, 2, 0},
+      {2, 2, 1},
+      {4, 2, 2},
+      {6, 2, 3},
+      {8, 2, 4},
+      {10, 2, 5},
+      {12, 4, 6}}},
     /**< Bifurcation properties for x4x4 */
     {2, {{0, 4, 0}, {4, 4, 1}}},
     /**< Bifurcation properties for x4x2x2 */
@@ -101,8 +133,7 @@ AriesBifurcationParamsType bifurcationModes[36] = {
     /**< Bifurcation properties for x2 */
     {1, {{0, 2, 0}}},
     /**< Bifurcation properties for x1 */
-    {1, {{0, 1, 0}}}
-};
+    {1, {{0, 1, 0}}}};
 
 #ifdef __cplusplus
 }

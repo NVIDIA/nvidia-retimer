@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,10 +30,11 @@ int main(void)
         std::string skuId{};
         try
         {
-            const std::string& switchPath = retimerApp->getSwitchDBusObject(retimerSwitchesBasePath + std::to_string(i));
+            const std::string& switchPath = retimerApp->getSwitchDBusObject(
+                retimerSwitchesBasePath + std::to_string(i));
             skuId = retimerApp->getSKUId(switchPath);
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             // ignore the error when the app starts
         }
@@ -46,7 +47,7 @@ int main(void)
             {
                 retimerApp->setDBusProperty(dbusMap, skuId);
             }
-            catch (const std::exception &e)
+            catch (const std::exception& e)
             {
                 // ignore the error when the app starts
             }
@@ -59,7 +60,7 @@ int main(void)
         {
             retimerApp->setDBusProperty(dbusMap, retimerSoftwareId);
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             // ignore the error when the app starts
         }

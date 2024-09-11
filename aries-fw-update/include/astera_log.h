@@ -21,18 +21,19 @@
 #ifndef ASTERA_LOG_H
 #define ASTERA_LOG_H
 
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 #include <time.h>
-#include <stdbool.h>
 
 #define LOG_VERSION "0.2.0"
 
-typedef void (*logLockFn)(void *udata, int lock);
+typedef void (*logLockFn)(void* udata, int lock);
 
-enum {
+enum
+{
     ASTERA_LOG_LEVEL_TRACE,
     ASTERA_LOG_LEVEL_DEBUG,
     ASTERA_LOG_LEVEL_INFO,
@@ -41,19 +42,25 @@ enum {
     ASTERA_LOG_LEVEL_FATAL
 };
 
-#define ASTERA_TRACE(...) asteraLogMsg(ASTERA_LOG_LEVEL_TRACE, __FILE__, __LINE__, __VA_ARGS__)
-#define ASTERA_DEBUG(...) asteraLogMsg(ASTERA_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
-#define ASTERA_INFO(...)  asteraLogMsg(ASTERA_LOG_LEVEL_INFO,  __FILE__, __LINE__, __VA_ARGS__)
-#define ASTERA_WARN(...)  asteraLogMsg(ASTERA_LOG_LEVEL_WARN,  __FILE__, __LINE__, __VA_ARGS__)
-#define ASTERA_ERROR(...) asteraLogMsg(ASTERA_LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
-#define ASTERA_FATAL(...) asteraLogMsg(ASTERA_LOG_LEVEL_FATAL, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_TRACE(...)                                                      \
+    asteraLogMsg(ASTERA_LOG_LEVEL_TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_DEBUG(...)                                                      \
+    asteraLogMsg(ASTERA_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_INFO(...)                                                       \
+    asteraLogMsg(ASTERA_LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_WARN(...)                                                       \
+    asteraLogMsg(ASTERA_LOG_LEVEL_WARN, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_ERROR(...)                                                      \
+    asteraLogMsg(ASTERA_LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
+#define ASTERA_FATAL(...)                                                      \
+    asteraLogMsg(ASTERA_LOG_LEVEL_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
-void asteraLogSetUdata(void *udata);
+void asteraLogSetUdata(void* udata);
 void asteraLogSetLock(logLockFn fn);
-void asteraLogSetFp(FILE *fp);
+void asteraLogSetFp(FILE* fp);
 void asteraLogSetLevel(int level);
 void asteraLogSetQuiet(int enable);
 
-void asteraLogMsg(int level, const char *file, int line, const char *fmt, ...);
+void asteraLogMsg(int level, const char* file, int line, const char* fmt, ...);
 
 #endif

@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <regex>
 #include <xyz/openbmc_project/Common/Device/error.hpp>
+
+#include <regex>
 
 using namespace phosphor::logging;
 using namespace sdbusplus::xyz::openbmc_project::Common::Device::Error;
@@ -31,8 +32,7 @@ using namespace nvidia::retimer::common;
 namespace nvidia::retimer::manager
 {
 
-RtManager::RtManager(sdbusplus::bus::bus& bus) :
-    bus(bus)
+RtManager::RtManager(sdbusplus::bus::bus& bus) : bus(bus)
 {
     using namespace sdeventplus;
 
@@ -56,16 +56,16 @@ RtManager::RtManager(sdbusplus::bus::bus& bus) :
             uint8_t busId = std::stoi(busN);
             uint8_t devAddr = std::stoi(address, nullptr, 16);
 
-            auto invMatch = std::find_if(
-                rtInvs.begin(), rtInvs.end(), [&invpath](auto& inv) {
-                    return inv->getInventoryPath() == invpath;
-                });
+            auto invMatch = std::find_if(rtInvs.begin(), rtInvs.end(),
+                                         [&invpath](auto& inv) {
+                return inv->getInventoryPath() == invpath;
+            });
             if (invMatch != rtInvs.end())
             {
                 continue;
             }
-            auto inv =
-                std::make_unique<Retimer>(bus, invpath, busId, devAddr, id);
+            auto inv = std::make_unique<Retimer>(bus, invpath, busId, devAddr,
+                                                 id);
             rtInvs.emplace_back(std::move(inv));
         }
         catch (const std::exception& e)
@@ -75,4 +75,4 @@ RtManager::RtManager(sdbusplus::bus::bus& bus) :
     }
 }
 
-} // namespace nvidia::cec::manager
+} // namespace nvidia::retimer::manager

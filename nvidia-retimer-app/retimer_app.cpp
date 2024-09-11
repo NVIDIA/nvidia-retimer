@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include "retimer_app.hpp"
 
 std::string RetimerApp::getService(const char* path,
-                                    const char* interface) const
+                                   const char* interface) const
 {
     using DbusInterfaceList = std::vector<std::string>;
     std::map<std::string, std::vector<std::string>> mapperResponse;
@@ -32,13 +32,12 @@ std::string RetimerApp::getService(const char* path,
     return mapperResponse.begin()->first;
 }
 
-
-void RetimerApp::getDBusProperty(const DBusMapping &dbusMap,
-                                 std::string &value)
+void RetimerApp::getDBusProperty(const DBusMapping& dbusMap, std::string& value)
 {
-    const auto& service = getService(dbusMap.objectPath.c_str(), dbusMap.interface.c_str());
-    auto method = bus.new_method_call(service.c_str(), dbusMap.objectPath.c_str(),
-                                        dbusProperties, "Get");
+    const auto& service = getService(dbusMap.objectPath.c_str(),
+                                     dbusMap.interface.c_str());
+    auto method = bus.new_method_call(
+        service.c_str(), dbusMap.objectPath.c_str(), dbusProperties, "Get");
     method.append(dbusMap.interface.c_str(), dbusMap.propertyName.c_str());
     auto reply = bus.call(method);
     PropertyValue propertyValue;
@@ -46,22 +45,22 @@ void RetimerApp::getDBusProperty(const DBusMapping &dbusMap,
     value = std::get<std::string>(propertyValue);
 }
 
-void RetimerApp::setDBusProperty(const DBusMapping &dbusMap,
-                                 const std::string &value)
+void RetimerApp::setDBusProperty(const DBusMapping& dbusMap,
+                                 const std::string& value)
 {
-    const auto& service = getService(dbusMap.objectPath.c_str(), dbusMap.interface.c_str());
-    auto method = bus.new_method_call(service.c_str(), dbusMap.objectPath.c_str(),
-                                        dbusProperties, "Set");
+    const auto& service = getService(dbusMap.objectPath.c_str(),
+                                     dbusMap.interface.c_str());
+    auto method = bus.new_method_call(
+        service.c_str(), dbusMap.objectPath.c_str(), dbusProperties, "Set");
     PropertyValue propertyValue = value;
     method.append(dbusMap.interface.c_str(), dbusMap.propertyName.c_str(),
-                    propertyValue);
+                  propertyValue);
     bus.call_noreply(method);
 }
 
 std::string RetimerApp::getSwitchDBusObject(const std::string& rootPath)
 {
     std::vector<std::string> paths;
-
 
     auto mapper = bus.new_method_call(mapperService, mapperPath,
                                       mapperInterface, "GetSubTreePaths");
@@ -77,10 +76,9 @@ std::string RetimerApp::getSwitchDBusObject(const std::string& rootPath)
         return {};
     }
     return paths.at(0);
-
 }
 
-std::string RetimerApp::getSKUId(const std::string &objPath)
+std::string RetimerApp::getSKUId(const std::string& objPath)
 {
     DBusMapping dbusMap;
     std::string deviceId, vendorId;
@@ -91,7 +89,7 @@ std::string RetimerApp::getSKUId(const std::string &objPath)
     {
         getDBusProperty(dbusMap, deviceId);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         return "";
     }
@@ -100,7 +98,7 @@ std::string RetimerApp::getSKUId(const std::string &objPath)
     {
         getDBusProperty(dbusMap, vendorId);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         return "";
     }
@@ -120,7 +118,7 @@ std::string RetimerApp::getSKUId(const std::string &objPath)
     return ("0x" + skuId);
 }
 
-void RetimerApp::softwareObjectCallback(sdbusplus::message::message &m)
+void RetimerApp::softwareObjectCallback(sdbusplus::message::message& m)
 {
     DBusMapping dbusMap;
     sdbusplus::message::object_path objPath;
@@ -129,21 +127,21 @@ void RetimerApp::softwareObjectCallback(sdbusplus::message::message &m)
 
     std::string path(std::move(objPath));
 
-    for (const auto &intf : interfaces)
+    for (const auto& intf : interfaces)
     {
         if (intf.first == versionInterface)
         {
             if (path.find(retimerFWInventoryPath) == 0)
             {
-                dbusMap.objectPath =
-                    retimerFWInventoryPath + path.substr(retimerFWInventoryPath.size());
+                dbusMap.objectPath = retimerFWInventoryPath +
+                                     path.substr(retimerFWInventoryPath.size());
                 dbusMap.interface = versionInterface;
                 dbusMap.propertyName = "SoftwareId";
                 try
                 {
                     setDBusProperty(dbusMap, retimerSoftwareId);
                 }
-                catch (const std::exception &e)
+                catch (const std::exception& e)
                 {
                     std::cerr << e.what() << '\n';
                 }
@@ -152,7 +150,7 @@ void RetimerApp::softwareObjectCallback(sdbusplus::message::message &m)
     }
 }
 
-void RetimerApp::switchObjectCallback(sdbusplus::message::message &m)
+void RetimerApp::switchObjectCallback(sdbusplus::message::message& m)
 {
     DBusMapping dbusMap;
     std::string path = m.get_path();
@@ -170,14 +168,15 @@ void RetimerApp::switchObjectCallback(sdbusplus::message::message &m)
             {
                 setDBusProperty(dbusMap, skuId);
             }
-            catch (const std::exception &e)
+            catch (const std::exception& e)
             {
                 std::cerr << e.what() << '\n';
             }
         }
         else
         {
-            std::cerr << "Error while getting SKU property" << "\n";
+            std::cerr << "Error while getting SKU property"
+                      << "\n";
         }
     }
 }
@@ -189,21 +188,21 @@ void RetimerApp::listenForGPUManagerEvents()
         switchObjectAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
             bus,
             ("interface='org.freedesktop.DBus.Properties',type='signal',"
-            "member='PropertiesChanged',arg0='xyz.openbmc_project.Inventory.Item."
-            "Switch',"),
+             "member='PropertiesChanged',arg0='xyz.openbmc_project.Inventory.Item."
+             "Switch',"),
             std::bind(std::mem_fn(&RetimerApp::switchObjectCallback), this,
-                    std::placeholders::_1));
+                      std::placeholders::_1));
 
         std::string arg0Path = "arg0path='" + retimerFWInventoryBasePath + "',";
         softwareObjectAddedMatch = std::make_unique<sdbusplus::bus::match_t>(
             bus,
             ("interface='org.freedesktop.DBus.ObjectManager',type='signal',"
-            "member='InterfacesAdded'," +
-            arg0Path),
+             "member='InterfacesAdded'," +
+             arg0Path),
             std::bind(std::mem_fn(&RetimerApp::softwareObjectCallback), this,
-                    std::placeholders::_1));
+                      std::placeholders::_1));
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }

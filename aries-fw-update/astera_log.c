@@ -21,36 +21,26 @@
 #include "include/astera_log.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-static struct {
-    void *udata;
+static struct
+{
+    void* udata;
     logLockFn lock;
-    FILE *fp;
+    FILE* fp;
     int level;
     int quiet;
     bool traceEn;
 } AsteraLogger;
 
-static const char *logLevelNames[] = {
-        "TRACE",
-        "DEBUG",
-        "INFO",
-        "WARN",
-        "ERROR",
-        "FATAL"
-};
+static const char* logLevelNames[] = {"TRACE", "DEBUG", "INFO",
+                                      "WARN",  "ERROR", "FATAL"};
 
 #ifdef LOG_USE_COLOR
-static const char *logLevelColors[] = {
-        "\x1b[94m",
-        "\x1b[36m",
-        "\x1b[32m",
-        "\x1b[33m",
-        "\x1b[31m",
-        "\x1b[35m"
-};
+static const char* logLevelColors[] = {"\x1b[94m", "\x1b[36m", "\x1b[32m",
+                                       "\x1b[33m", "\x1b[31m", "\x1b[35m"};
 #endif
 
 static void lock(void)
@@ -69,7 +59,7 @@ static void unlock(void)
     }
 }
 
-void asteraLogSetUdata(void *udata)
+void asteraLogSetUdata(void* udata)
 {
     AsteraLogger.udata = udata;
 }
@@ -79,7 +69,7 @@ void asteraLogSetLock(logLockFn fn)
     AsteraLogger.lock = fn;
 }
 
-void asteraLogSetFp(FILE *fp)
+void asteraLogSetFp(FILE* fp)
 {
     AsteraLogger.fp = fp;
 }
@@ -98,7 +88,7 @@ void asteraLogSetQuiet(int enable)
     AsteraLogger.quiet = enable ? 1 : 0;
 }
 
-void asteraLogMsg(int level, const char *file, int line, const char *fmt, ...)
+void asteraLogMsg(int level, const char* file, int line, const char* fmt, ...)
 {
     if (level == 0 && !(AsteraLogger.traceEn))
     {
@@ -114,7 +104,7 @@ void asteraLogMsg(int level, const char *file, int line, const char *fmt, ...)
 
     /* Get current time */
     time_t t = time(NULL);
-    struct tm *lt = localtime(&t);
+    struct tm* lt = localtime(&t);
 
     /* Log to stderr */
     if (!AsteraLogger.quiet)
@@ -123,11 +113,11 @@ void asteraLogMsg(int level, const char *file, int line, const char *fmt, ...)
         char buf[16];
         buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
 #ifdef LOG_USE_COLOR
-        fprintf(
-          stderr, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-          buf, logLevelColors[level], logLevelNames[level], file, line);
+        fprintf(stderr, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buf,
+                logLevelColors[level], logLevelNames[level], file, line);
 #else
-        fprintf(stderr, "%s %-5s %s:%d: ", buf, logLevelNames[level], file, line);
+        fprintf(stderr, "%s %-5s %s:%d: ", buf, logLevelNames[level], file,
+                line);
 #endif
         va_start(args, fmt);
         vfprintf(stderr, fmt, args);
@@ -142,7 +132,8 @@ void asteraLogMsg(int level, const char *file, int line, const char *fmt, ...)
         va_list args;
         char buf[32];
         buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", lt)] = '\0';
-        fprintf(AsteraLogger.fp, "%s %-5s %s:%d: ", buf, logLevelNames[level], file, line);
+        fprintf(AsteraLogger.fp, "%s %-5s %s:%d: ", buf, logLevelNames[level],
+                file, line);
         va_start(args, fmt);
         vfprintf(AsteraLogger.fp, fmt, args);
         va_end(args);

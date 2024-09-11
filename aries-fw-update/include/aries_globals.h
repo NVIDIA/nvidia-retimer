@@ -28,9 +28,9 @@
 /** EEPROM Page Count */
 #define ARIES_EEPROM_PAGE_COUNT 1024
 /** EEPROM Page Size */
-#define ARIES_EEPROM_PAGE_SIZE  256
+#define ARIES_EEPROM_PAGE_SIZE 256
 /** Max Burst Size */
-#define ARIES_MAX_BURST_SIZE    256
+#define ARIES_MAX_BURST_SIZE 256
 /** EEPROM MM block write size */
 #define ARIES_EEPROM_BLOCK_WRITE_SIZE 16
 /** EEPROM MM block checksum write size */
@@ -81,9 +81,9 @@
 //////////////////////////////////////
 
 /** Wait time after completing an EEPROM block write-thru */
-#define ARIES_DATA_BLOCK_PROGRAM_TIME_USEC  10000
+#define ARIES_DATA_BLOCK_PROGRAM_TIME_USEC 10000
 /** Wait time after setting manual training */
-#define ARIES_MAN_TRAIN_WAIT_SEC           0.01
+#define ARIES_MAN_TRAIN_WAIT_SEC 0.01
 
 //////////////////////////////////////
 ////////// Memory parameters //////////
@@ -129,13 +129,13 @@
 ///////////////////////////////////////////////////////////
 
 /** Num of readings to take at each PMA */
-#define ARIES_TEMP_NUM_READINGS  16
+#define ARIES_TEMP_NUM_READINGS 16
 
 /** Temperature to offset result by */
-#define ARIES_TEMPERATURE_OFFSET  25
+#define ARIES_TEMPERATURE_OFFSET 25
 
 /** Aries Pma temperature measurement slope val */
-#define ARIES_TEMP_SLOPE ((310-560)/(105-25))
+#define ARIES_TEMP_SLOPE ((310 - 560) / (105 - 25))
 
 /** Aries Pma temperature offset (min) */
 #define ARIES_TEMP_OFFSET_MIN 560
@@ -176,7 +176,7 @@
 #define ARIES_PIPE_POWERDOWN_P0 0
 #define ARIES_PIPE_POWERDOWN_P1 2
 
-#define ARIES_PIPE_DEEMPHASIS_DE_NONE     -1
+#define ARIES_PIPE_DEEMPHASIS_DE_NONE -1
 #define ARIES_PIPE_DEEMPHASIS_PRESET_NONE -1
 
 #endif /* ASTERA_ARIES_SDK_GLOBALS_H */

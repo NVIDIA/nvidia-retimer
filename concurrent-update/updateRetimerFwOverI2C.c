@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-
-
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <sys/ioctl.h>
@@ -61,8 +59,12 @@ ErrorCodeMapTable table[] = {
 
 volatile extendedErrorCode *dumpExtendedI2CReg = NULL;
 
-const uint8_t CompositeImageHeaderUuid[16] = {0x8c, 0x28, 0xd7, 0x7a, 0x97, 0x07, 0x43, 0xd7, 0xbc, 0x13, 0xc1, 0x2b, 0x3a, 0xbb, 0x4b, 0x87};
-const uint8_t ComponentHeaderMagic[4] = {(uint8_t) 'R', (uint8_t) 'T', (uint8_t) 'I', (uint8_t) 'H'};
+const uint8_t CompositeImageHeaderUuid[16] = { 0x8c, 0x28, 0xd7, 0x7a,
+					       0x97, 0x07, 0x43, 0xd7,
+					       0xbc, 0x13, 0xc1, 0x2b,
+					       0x3a, 0xbb, 0x4b, 0x87 };
+const uint8_t ComponentHeaderMagic[4] = { (uint8_t)'R', (uint8_t)'T',
+					  (uint8_t)'I', (uint8_t)'H' };
 
 void debug_print(char *fmt, ...)
 {
@@ -537,7 +539,8 @@ int checkDigit_i2c(char *str)
  * RETURN: 0 if success
  *****************************************************/
 int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
-	const char *pldmVersionStr, update_operation **update_ops, int *update_ops_count)
+			const char *pldmVersionStr,
+			update_operation **update_ops, int *update_ops_count)
 {
 	int ret = 0;
 	char msg[MAX_NAME_SIZE] = { 0 };
@@ -551,13 +554,16 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 	// Check CompositeImageHeader
 	compositeImageHeader = (CompositeImageHeader *)imageMappedAddr;
 	if (fw_size < sizeof(CompositeImageHeader) ||
-		memcmp(&compositeImageHeader->uuid, &CompositeImageHeaderUuid,
-			sizeof(CompositeImageHeaderUuid))) {
-		fprintf(stderr, "retimer firmware is a bare image (does not match header)\n");
+	    memcmp(&compositeImageHeader->uuid, &CompositeImageHeaderUuid,
+		   sizeof(CompositeImageHeaderUuid))) {
+		fprintf(stderr,
+			"retimer firmware is a bare image (does not match header)\n");
 		*update_ops = calloc(1, sizeof(update_operation));
 		if (!*update_ops) {
 			ret = -ERROR_MALLOC_FAILURE;
-			strncpy(msg, "Failed to allocate memory for update_ops!", sizeof(msg) - 1);
+			strncpy(msg,
+				"Failed to allocate memory for update_ops!",
+				sizeof(msg) - 1);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -578,10 +584,12 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 
 		// verify the CompositeImageHeader CRC
 		if (crc32((const unsigned char *)compositeImageHeader,
-				sizeof(*compositeImageHeader) - sizeof(compositeImageHeader->headerCrc))
-				!= compositeImageHeader->headerCrc) {
+			  sizeof(*compositeImageHeader) -
+				  sizeof(compositeImageHeader->headerCrc)) !=
+		    compositeImageHeader->headerCrc) {
 			ret = -ERROR_WRONG_CRC32_CHKSM;
-			strncpy(msg, "CompositeImageHeader.headerCrc mismatch", sizeof(msg) - 1);
+			strncpy(msg, "CompositeImageHeader.headerCrc mismatch",
+				sizeof(msg) - 1);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -594,7 +602,9 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		// verify the CompositeImageHeader version
 		if (compositeImageHeader->majorVersion != 1) {
 			ret = -ERROR_COMPOSITE_UNSUPPORTED_VERSION;
-			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: unrecognized version %hhu",
+			snprintf(
+				msg, sizeof(msg) - 1,
+				"CompositeImageHeader: unrecognized version %hhu",
 				compositeImageHeader->majorVersion);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
@@ -608,7 +618,9 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		// verify the CompositeImageHeader platformType
 		if (compositeImageHeader->platformType != PLATFORM_TYPE) {
 			ret = -ERROR_COMPOSITE_UNSUPPORTED_PLATFORM_TYPE;
-			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: incorrect platformType %hhu",
+			snprintf(
+				msg, sizeof(msg) - 1,
+				"CompositeImageHeader: incorrect platformType %hhu",
 				compositeImageHeader->platformType);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
@@ -622,7 +634,9 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		// verify the component count
 		if (compositeImageHeader->componentCount > RETIMER_MAX_NUM) {
 			ret = -ERROR_COMPOSITE_IMAGE_TOO_MANY_COMPS;
-			snprintf(msg, sizeof(msg) - 1, "CompositeImageHeader: too many components %hhu",
+			snprintf(
+				msg, sizeof(msg) - 1,
+				"CompositeImageHeader: too many components %hhu",
 				compositeImageHeader->componentCount);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
@@ -636,9 +650,11 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		// verify the file length matches
 		if (compositeImageHeader->fileLength != fw_size) {
 			ret = -ERROR_COMPOSITE_IMAGE_TRUNCATED;
-			snprintf(msg, sizeof(msg) - 1,
+			snprintf(
+				msg, sizeof(msg) - 1,
 				"CompositeImageHeader: file length %zu does not match header %zu",
-				fw_size, (size_t)compositeImageHeader->fileLength);
+				fw_size,
+				(size_t)compositeImageHeader->fileLength);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -649,15 +665,19 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		}
 
 		// print the SKU but do not verify
-		fprintf(stdout, "CompositeImageHeader: composite image SKU is %#x\n",
+		fprintf(stdout,
+			"CompositeImageHeader: composite image SKU is %#x\n",
 			compositeImageHeader->sku);
 
 		// Verify the file is long enough to contain all ComponentHeaders
 		nextImageOffset = sizeof(*compositeImageHeader) +
-			compositeImageHeader->componentCount * sizeof(ComponentHeader);
+				  compositeImageHeader->componentCount *
+					  sizeof(ComponentHeader);
 		if (fw_size < nextImageOffset) {
 			ret = -ERROR_COMPOSITE_IMAGE_TOO_SHORT_FOR_HEADERS;
-			strncpy(msg, "File is too short for all ComponentHeaders", sizeof(msg) - 1);
+			strncpy(msg,
+				"File is too short for all ComponentHeaders",
+				sizeof(msg) - 1);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -673,14 +693,17 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		}
 
 		// The first ComponentHeader starts immediately after the CompositeImageHeader
-		componentHeaders = (ComponentHeader *)
-			(imageMappedAddr + sizeof(CompositeImageHeader));
+		componentHeaders =
+			(ComponentHeader *)(imageMappedAddr +
+					    sizeof(CompositeImageHeader));
 
 		*update_ops = calloc(compositeImageHeader->componentCount,
-			sizeof(update_operation));
+				     sizeof(update_operation));
 		if (!*update_ops) {
 			ret = -ERROR_MALLOC_FAILURE;
-			strncpy(msg, "Failed to allocate memory for update_ops!", sizeof(msg) - 1);
+			strncpy(msg,
+				"Failed to allocate memory for update_ops!",
+				sizeof(msg) - 1);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -692,13 +715,16 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		*update_ops_count = compositeImageHeader->componentCount;
 
 		// Verify each ComponentHeader and fill in update_operation struct
-		for (int comp = 0; comp < compositeImageHeader->componentCount; comp++) {
+		for (int comp = 0; comp < compositeImageHeader->componentCount;
+		     comp++) {
 			fprintf(stdout, "verifying ComponentHeader %d\n", comp);
 			// Verify ComponentHeader.magic
-			if (memcmp(&componentHeaders[comp], ComponentHeaderMagic,
-				sizeof(ComponentHeaderMagic))) {
+			if (memcmp(&componentHeaders[comp],
+				   ComponentHeaderMagic,
+				   sizeof(ComponentHeaderMagic))) {
 				ret = -ERROR_COMPOSITE_IMAGE_HEADER_CORRUPT;
-				strncpy(msg, "ComponentHeader is invalid", sizeof(msg) - 1);
+				strncpy(msg, "ComponentHeader is invalid",
+					sizeof(msg) - 1);
 				fprintf(stderr, "%s\n", msg);
 				genericMessageRegistry(
 					"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -710,11 +736,13 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 
 			// Verify the ComponentHeader CRC
 			if (crc32((const unsigned char *)&componentHeaders[comp],
-				sizeof(componentHeaders[comp]) - sizeof(
-					componentHeaders[comp].componentHeaderCrc))
-				!= componentHeaders[comp].componentHeaderCrc) {
+				  sizeof(componentHeaders[comp]) -
+					  sizeof(componentHeaders[comp]
+							 .componentHeaderCrc)) !=
+			    componentHeaders[comp].componentHeaderCrc) {
 				ret = -ERROR_WRONG_CRC32_CHKSM;
-				snprintf(msg, sizeof(msg) - 1,
+				snprintf(
+					msg, sizeof(msg) - 1,
 					"ComponentHeader %d componentHeaderCrc mismatch",
 					comp);
 				fprintf(stderr, "%s\n", msg);
@@ -729,27 +757,14 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 			// fill in the startOffset and imageLength fields of update_operation
 			// verify that image start and end are in bounds and no overflow
 			if (nextImageOffset > fw_size ||
-				nextImageOffset + componentHeaders[comp].imageLength > fw_size ||
-				nextImageOffset + componentHeaders[comp].imageLength < nextImageOffset) {
+			    nextImageOffset +
+					    componentHeaders[comp].imageLength >
+				    fw_size ||
+			    nextImageOffset +
+					    componentHeaders[comp].imageLength <
+				    nextImageOffset) {
 				ret = -ERROR_COMPOSITE_IMAGE_DATA_OUT_OF_BOUNDS;
-				strncpy(msg, "Image data out of bounds", sizeof(msg) - 1);
-				fprintf(stderr, "%s\n", msg);
-				genericMessageRegistry(
-					"ResourceEvent.1.0.ResourceErrorsDetected",
-					"HGX_PCIeRetimer Update Service", msg,
-					"xyz.openbmc_project.Logging.Entry.Level.Critical",
-					"Contact NVIDIA support.");
-				goto exit;
-			}
-			(*update_ops)[comp].startOffset = nextImageOffset;
-			(*update_ops)[comp].imageLength = componentHeaders[comp].imageLength;
-			nextImageOffset += componentHeaders[comp].imageLength;
-
-			// make sure no retimer is targeted by more than one component
-			// check for retimers previously covered AND in this component
-			if (coveredRetimerBitmap & componentHeaders[comp].applyBitmap) {
-				ret = -ERROR_COMPOSITE_RT_TARGETED_MULTIPLE_TIMES;
-				strncpy(msg, "retimer already updated by previous component",
+				strncpy(msg, "Image data out of bounds",
 					sizeof(msg) - 1);
 				fprintf(stderr, "%s\n", msg);
 				genericMessageRegistry(
@@ -759,8 +774,31 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 					"Contact NVIDIA support.");
 				goto exit;
 			}
-			coveredRetimerBitmap |= componentHeaders[comp].applyBitmap;
-			(*update_ops)[comp].applyBitmap = componentHeaders[comp].applyBitmap;
+			(*update_ops)[comp].startOffset = nextImageOffset;
+			(*update_ops)[comp].imageLength =
+				componentHeaders[comp].imageLength;
+			nextImageOffset += componentHeaders[comp].imageLength;
+
+			// make sure no retimer is targeted by more than one component
+			// check for retimers previously covered AND in this component
+			if (coveredRetimerBitmap &
+			    componentHeaders[comp].applyBitmap) {
+				ret = -ERROR_COMPOSITE_RT_TARGETED_MULTIPLE_TIMES;
+				strncpy(msg,
+					"retimer already updated by previous component",
+					sizeof(msg) - 1);
+				fprintf(stderr, "%s\n", msg);
+				genericMessageRegistry(
+					"ResourceEvent.1.0.ResourceErrorsDetected",
+					"HGX_PCIeRetimer Update Service", msg,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					"Contact NVIDIA support.");
+				goto exit;
+			}
+			coveredRetimerBitmap |=
+				componentHeaders[comp].applyBitmap;
+			(*update_ops)[comp].applyBitmap =
+				componentHeaders[comp].applyBitmap;
 			strncpy((*update_ops)[comp].versionString,
 				componentHeaders[comp].versionString,
 				sizeof((*update_ops)[comp].versionString) - 1);
@@ -770,8 +808,10 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 		// are targeted.
 		if (coveredRetimerBitmap > RETIMERALL) {
 			ret = -ERROR_COMPOSITE_TARGETED_INDEX_OUT_OF_RANGE;
-			snprintf(msg, sizeof(msg) - 1, "Targeting a retimer that " \
-				"does not exist on this platform, bitmap %#x", coveredRetimerBitmap);
+			snprintf(msg, sizeof(msg) - 1,
+				 "Targeting a retimer that "
+				 "does not exist on this platform, bitmap %#x",
+				 coveredRetimerBitmap);
 			fprintf(stderr, "%s\n", msg);
 			genericMessageRegistry(
 				"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -783,17 +823,22 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 
 		// verify that all retimers on this platform were targeted (nonfatal)
 		if (coveredRetimerBitmap != RETIMERALL) {
-			fprintf(stderr, "[WARN] Not all retimers targeted! Only targeted %#x\n",
+			fprintf(stderr,
+				"[WARN] Not all retimers targeted! Only targeted %#x\n",
 				coveredRetimerBitmap);
 		}
 
 		// Now file size is known OK, so we can safely read image data
-		for (int comp = 0; comp < compositeImageHeader->componentCount; comp++) {
+		for (int comp = 0; comp < compositeImageHeader->componentCount;
+		     comp++) {
 			// Verify the image data CRC
-			if (crc32(imageMappedAddr + (*update_ops)[comp].startOffset,
-				(*update_ops)[comp].imageLength) != componentHeaders[comp].imageCrc) {
+			if (crc32(imageMappedAddr +
+					  (*update_ops)[comp].startOffset,
+				  (*update_ops)[comp].imageLength) !=
+			    componentHeaders[comp].imageCrc) {
 				ret = -ERROR_WRONG_CRC32_CHKSM;
-				snprintf(msg, sizeof(msg) - 1, "Image %d CRC mismatch", comp);
+				snprintf(msg, sizeof(msg) - 1,
+					 "Image %d CRC mismatch", comp);
 				fprintf(stderr, "%s\n", msg);
 				genericMessageRegistry(
 					"ResourceEvent.1.0.ResourceErrorsDetected",
@@ -802,7 +847,8 @@ int parseCompositeImage(const unsigned char *imageMappedAddr, size_t fw_size,
 					"Contact NVIDIA support.");
 				goto exit;
 			}
-			(*update_ops)[comp].imageCrc = componentHeaders[comp].imageCrc;
+			(*update_ops)[comp].imageCrc =
+				componentHeaders[comp].imageCrc;
 		}
 	}
 	return 0;
@@ -917,7 +963,7 @@ int copyImageFromFileToFpga(int fw_fd, int fd, unsigned int slaveId)
  ********************************************************************/
 
 int copyImageFromMemToFpga(const unsigned char *fw_addr, size_t fw_size,
-	unsigned int fw_crc32, int fd, unsigned int slaveId)
+			   unsigned int fw_crc32, int fd, unsigned int slaveId)
 {
 	int ret = -1;
 	unsigned char write_buffer[WRITE_BUF_SIZE] = { 0 };
@@ -932,25 +978,21 @@ int copyImageFromMemToFpga(const unsigned char *fw_addr, size_t fw_size,
 
 	// 5. Copy FW image to FPGA DP RAM 0x0_0000
 	fprintf(stdout, "Initiate Copy to FPGA RAM...\n");
-	fprintf(stdout, "RETIMER FW Image size: 0x%lx \n",
-		(long int)fw_size);
+	fprintf(stdout, "RETIMER FW Image size: 0x%lx \n", (long int)fw_size);
 
 	pageCount = ((unsigned int)fw_size / BYTE_PER_PAGE);
 	//Copy FW image to FPGA DP RAM 0x0_0000
-	//Write to DPRAM address to write_buffer0, write_buffer1, write_buffer 2 and then upto 256 bytes of payload till 
+	//Write to DPRAM address to write_buffer0, write_buffer1, write_buffer 2 and then upto 256 bytes of payload till
 	//the complete image is transferred
 	for (uint32_t i = 0; i <= pageCount; i++) {
 		size_t bytes_to_transfer = 0;
-		if (i < pageCount)
-		{
+		if (i < pageCount) {
 			bytes_to_transfer = BYTE_PER_PAGE;
+		} else {
+			bytes_to_transfer =
+				fw_size - (pageCount * BYTE_PER_PAGE);
 		}
-		else
-		{
-			bytes_to_transfer = fw_size - (pageCount * BYTE_PER_PAGE);
-		}
-		if (bytes_to_transfer <= 0)
-		{
+		if (bytes_to_transfer <= 0) {
 			break;
 		}
 		memset(write_buffer, 0x00, sizeof(write_buffer));
@@ -1407,8 +1449,8 @@ int startRetimerFwUpdate(int fd, uint8_t retimerNumber, char *versionStr,
 							  mask_retimer,
 							  &retryUpdate4Retimer);
 				prepareMessageRegistry(
-					retryUpdate4Retimer, "TransferFailed", versionStr,
-					MSG_REG_VER_FOLLOWED_BY_DEV,
+					retryUpdate4Retimer, "TransferFailed",
+					versionStr, MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					"Reach out to the NVIDIA support team for further action",
 					0);

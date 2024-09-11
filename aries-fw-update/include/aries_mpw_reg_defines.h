@@ -26,10 +26,10 @@
 ///////////////////////////////////////////////////////////////
 
 /** AL SRAM DMEM offset (MPW) */
-#define AL_MAIN_SRAM_DMEM_OFFSET 60*1024
+#define AL_MAIN_SRAM_DMEM_OFFSET 60 * 1024
 
 /** AL Path SRAM DMEM offset (MPW) */
-#define AL_PATH_SRAM_DMEM_OFFSET (45*1024)
+#define AL_PATH_SRAM_DMEM_OFFSET (45 * 1024)
 
 /** SRAM read command */
 #define AL_TG_RD_LOC_IND_SRAM 0x16
@@ -42,13 +42,13 @@
 ///////////////////////////////////////////////////////////
 
 /** Offset for main micro FW info */
-#define ARIES_MAIN_MICRO_FW_INFO (64*1024 - 128)
+#define ARIES_MAIN_MICRO_FW_INFO (64 * 1024 - 128)
 
 /** Offset for path micro FW info */
-#define ARIES_PATH_MICRO_FW_INFO_ADDRESS (48*1024 - 256)
+#define ARIES_PATH_MICRO_FW_INFO_ADDRESS (48 * 1024 - 256)
 
 /** Link Struct Base address (Main Micro)*/
-#define ARIES_LINK_0_MM_BASE_ADDR  0xF660
+#define ARIES_LINK_0_MM_BASE_ADDR 0xF660
 
 ///////////////////////////////////////////////////////////
 /////////////////// Path Micro Members ////////////////////
@@ -153,25 +153,24 @@
 /** Offset seperating 2 links in Aries Link struct */
 #define ARIES_LINK_STRUCT_LINK_SEP_OFFSET 126
 
-
 ///////////////////////////////////////////////////////////
 ////////////////////// PMA registers //////////////////////
 ///////////////////////////////////////////////////////////
 
 /** PMA Slice 0 Cmd register address*/
-#define ARIES_PMA_QS0_CMD_ADDRESS     0x4400
+#define ARIES_PMA_QS0_CMD_ADDRESS 0x4400
 
 /** PMA Slice 0 Address_1 register address*/
-#define ARIES_PMA_QS0_ADDR_1_ADDRESS  0x4401
+#define ARIES_PMA_QS0_ADDR_1_ADDRESS 0x4401
 
 /** PMA Slice 0 Address_0 register address*/
-#define ARIES_PMA_QS0_ADDR_0_ADDRESS  0x4402
+#define ARIES_PMA_QS0_ADDR_0_ADDRESS 0x4402
 
 /** PMA Slice 0 Data_0 register address*/
-#define ARIES_PMA_QS0_DATA_0_ADDRESS  0x4403
+#define ARIES_PMA_QS0_DATA_0_ADDRESS 0x4403
 
 /** PMA Slice 0 Data_1 register address*/
-#define ARIES_PMA_QS0_DATA_1_ADDRESS  0x4404
+#define ARIES_PMA_QS0_DATA_1_ADDRESS 0x4404
 
 /** Reg offset for PMA reg LANE_DIG_ASIC_RX_OVRD_IN_3 */
 #define ARIES_PMA_LANE_DIG_ASIC_RX_OVRD_IN_3 0x101a

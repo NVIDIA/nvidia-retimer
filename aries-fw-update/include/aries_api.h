@@ -21,12 +21,12 @@
 #ifndef ASTERA_ARIES_SDK_API_H_
 #define ASTERA_ARIES_SDK_API_H_
 
-#include "aries_globals.h"
-#include "aries_error.h"
-#include "aries_i2c.h"
 #include "aries_api_types.h"
-#include "aries_misc.h"
 #include "aries_bifurcation_params.h"
+#include "aries_error.h"
+#include "aries_globals.h"
+#include "aries_i2c.h"
+#include "aries_misc.h"
 
 #ifdef ARIES_MPW
 #include "aries_mpw_reg_defines.h"
@@ -34,14 +34,15 @@
 #include "aries_a0_reg_defines.h"
 #endif
 
-#include <stdint.h>
-#include <unistd.h>
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #define ARIES_SDK_VERSION "2.5"
@@ -62,8 +63,7 @@ const uint8_t* ariesGetSDKVersion(void);
  * @param[in,out]  device  Aries device struct
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesFWStatusCheck(
-        AriesDeviceType* device);
+AriesErrorType ariesFWStatusCheck(AriesDeviceType* device);
 
 /**
  * @brief Initialize Aries device
@@ -74,8 +74,7 @@ AriesErrorType ariesFWStatusCheck(
  * @param[in,out]  device  Aries device struct
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesInitDevice(
-        AriesDeviceType* device);
+AriesErrorType ariesInitDevice(AriesDeviceType* device);
 
 /**
  * @brief Set the bifurcation mode
@@ -87,9 +86,8 @@ AriesErrorType ariesInitDevice(
  * @param[in]  bifur      Bifurcation mode
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetBifurcationMode(
-        AriesDeviceType* device,
-        AriesBifurcationType bifur);
+AriesErrorType ariesSetBifurcationMode(AriesDeviceType* device,
+                                       AriesBifurcationType bifur);
 
 /**
  * @brief Get the bifurcation mode
@@ -101,9 +99,8 @@ AriesErrorType ariesSetBifurcationMode(
  * @param[in]  bifur      Pointer to bifurcation mode variable
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetBifurcationMode(
-        AriesDeviceType* device,
-        AriesBifurcationType* bifur);
+AriesErrorType ariesGetBifurcationMode(AriesDeviceType* device,
+                                       AriesBifurcationType* bifur);
 
 /**
  * @brief Set the PCIe Protocol Reset.
@@ -117,9 +114,7 @@ AriesErrorType ariesGetBifurcationMode(
  * @param[in]  reset      Reset assert (1) or de-assert (0)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetPcieReset(
-        AriesLinkType* link,
-        uint8_t reset);
+AriesErrorType ariesSetPcieReset(AriesLinkType* link, uint8_t reset);
 
 /**
  * @brief Set the PCIe HW Reset. This function sets the register to assert
@@ -131,9 +126,7 @@ AriesErrorType ariesSetPcieReset(
  * @param[in]  reset      Reset assert (1) or de-assert (0)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetPcieHwReset(
-        AriesDeviceType* device,
-        uint8_t reset);
+AriesErrorType ariesSetPcieHwReset(AriesDeviceType* device, uint8_t reset);
 
 /**
  * @brief Update the FW image in the EEPROM connected to the Retimer.
@@ -147,9 +140,7 @@ AriesErrorType ariesSetPcieHwReset(
  *                      written to the EEPROM
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesUpdateFirmware(
-        AriesDeviceType* device,
-        char* filename);
+AriesErrorType ariesUpdateFirmware(AriesDeviceType* device, char* filename);
 
 /**
  * @brief Load a FW image into the EEPROM connected to the Retimer.
@@ -161,14 +152,13 @@ AriesErrorType ariesUpdateFirmware(
  * @param[in]  values   Pointer to byte array containing the data to be
  *                      written to the EEPROM
  * @param[in]  legacyMode   If true, write EEPROM in slower legacy mode
-                            (set this flag in error scenarios, when you wish to write EEPROM without using faster Main Micro
-                            assisted writes). Please set to false otherwise.
+                            (set this flag in error scenarios, when you wish to
+ write EEPROM without using faster Main Micro assisted writes). Please set to
+ false otherwise.
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesWriteEEPROMImage(
-        AriesDeviceType* device,
-        uint8_t* values,
-        bool legacyMode);
+AriesErrorType ariesWriteEEPROMImage(AriesDeviceType* device, uint8_t* values,
+                                     bool legacyMode);
 
 /**
  * @brief Verify the FW image in the EEPROM connected to the Retimer.
@@ -183,17 +173,17 @@ AriesErrorType ariesWriteEEPROMImage(
  *                        will be compared against this.
  * @param[in]  numBytes  Number of bytes to compare (<= 256k)
  * @param[in]  legacyMode  If true, write EEPROM in slower legacy mode
-                            (set this flag in error scenarios, when you wish to read EEPROM without using faster Main Micro
-                            assisted read). Please set to false otherwise.
+                            (set this flag in error scenarios, when you wish to
+ read EEPROM without using faster Main Micro assisted read). Please set to false
+ otherwise.
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesVerifyEEPROMImage(
-        AriesDeviceType* device,
-        uint8_t* values,
-        bool legacyMode);
+AriesErrorType ariesVerifyEEPROMImage(AriesDeviceType* device, uint8_t* values,
+                                      bool legacyMode);
 
 /**
- * @brief Verify the FW image in the EEPROM connected to the Retimer via checksum.
+ * @brief Verify the FW image in the EEPROM connected to the Retimer via
+ * checksum.
  *
  * In this case, no re-writes happen in case of a failure.
  * It is recommended to attempt the rewrite the FW into the EEPROM again
@@ -206,9 +196,8 @@ AriesErrorType ariesVerifyEEPROMImage(
  * @param[in]  numBytes size of FW image (in bytes)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesVerifyEEPROMImageViaChecksum(
-        AriesDeviceType* device,
-        uint8_t* image);
+AriesErrorType ariesVerifyEEPROMImageViaChecksum(AriesDeviceType* device,
+                                                 uint8_t* image);
 
 /**
  * @brief Calculate block CRCs from data in EEPROM
@@ -218,9 +207,7 @@ AriesErrorType ariesVerifyEEPROMImageViaChecksum(
  * @param[in, out]  numBytes size of image (in bytes)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesCheckEEPROMCrc(
-        AriesDeviceType* device,
-        uint8_t* image);
+AriesErrorType ariesCheckEEPROMCrc(AriesDeviceType* device, uint8_t* image);
 
 /**
  * @brief Calculate block CRCs from data in EEPROM
@@ -230,32 +217,29 @@ AriesErrorType ariesCheckEEPROMCrc(
  * @param[in, out]  numCrcBytes size of crcBytes (in bytes)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesCheckEEPROMImageCrcBytes(
-        AriesDeviceType* device,
-        uint8_t* crcBytes,
-        uint8_t* numCrcBytes);
+AriesErrorType ariesCheckEEPROMImageCrcBytes(AriesDeviceType* device,
+                                             uint8_t* crcBytes,
+                                             uint8_t* numCrcBytes);
 
 /**
  * @brief Load a FW image into the EEPROM connected to the Retimer.
  *
- * This method will only write the bytes different between the current loaded image
- * and the new image
+ * This method will only write the bytes different between the current loaded
+ * image and the new image
  *
  * @param[in]  device  Struct containing device information
- * @param[in]  imageCurrent     Pointer to byte array containing the data in the EEPROM
- *                               currently
+ * @param[in]  imageCurrent     Pointer to byte array containing the data in the
+ * EEPROM currently
  * @param[in]  sizeCurrent  Size of imageCurrent
- * @param[in]  imageNew     Pointer to byte array containing the data to be written
- *                          to the EEPROM
+ * @param[in]  imageNew     Pointer to byte array containing the data to be
+ * written to the EEPROM
  * @param[in]  sizeNew  Size of imageNew
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesWriteEEPROMImageDelta(
-        AriesDeviceType* device,
-        uint8_t* imageCurrent,
-        int sizeCurrent,
-        uint8_t* imageNew,
-        int sizeNew);
+AriesErrorType ariesWriteEEPROMImageDelta(AriesDeviceType* device,
+                                          uint8_t* imageCurrent,
+                                          int sizeCurrent, uint8_t* imageNew,
+                                          int sizeNew);
 
 /**
  * @brief Read a byte from the EEPROM.
@@ -268,10 +252,8 @@ AriesErrorType ariesWriteEEPROMImageDelta(
  * @param[in,out]  value    Data read from EEPROM (1 byte)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesReadEEPROMByte(
-        AriesDeviceType* device,
-        int addr,
-        uint8_t* value);
+AriesErrorType ariesReadEEPROMByte(AriesDeviceType* device, int addr,
+                                   uint8_t* value);
 
 /**
  * @brief Write a byte to the EEPROM.
@@ -284,10 +266,8 @@ AriesErrorType ariesReadEEPROMByte(
  * @param[in]  value    Data to write to EEPROM (1 byte)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesWriteEEPROMByte(
-        AriesDeviceType* device,
-        int addr,
-        uint8_t* value);
+AriesErrorType ariesWriteEEPROMByte(AriesDeviceType* device, int addr,
+                                    uint8_t* value);
 
 /**
  * @brief Enable self checking in the Sram memory
@@ -295,8 +275,7 @@ AriesErrorType ariesWriteEEPROMByte(
  * @param[in] device   Pointer to Aries Device struct object
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesMMSRAMCheckStart(
-        AriesDeviceType* device);
+AriesErrorType ariesMMSRAMCheckStart(AriesDeviceType* device);
 
 /**
  * @brief Get status of self check in the Sram memory
@@ -305,22 +284,19 @@ AriesErrorType ariesMMSRAMCheckStart(
  * @param[in, out] status   Pointer to AriesSramMemoryCheck enum
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesMMSRAMCheckStatus(
-        AriesDeviceType* device,
-        AriesSramMemoryCheckType* status);
-
+AriesErrorType ariesMMSRAMCheckStatus(AriesDeviceType* device,
+                                      AriesSramMemoryCheckType* status);
 
 /**
  * @brief Check connection health
  *
  * @param[in] device   Pointer to Aries Device struct object
- * @param[in] slaveAddress   Desired Retimer I2C (7-bit) address in case ARP needs to be run
+ * @param[in] slaveAddress   Desired Retimer I2C (7-bit) address in case ARP
+ * needs to be run
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesCheckConnectionHealth(
-        AriesDeviceType* device,
-        uint8_t slaveAddress);
-
+AriesErrorType ariesCheckConnectionHealth(AriesDeviceType* device,
+                                          uint8_t slaveAddress);
 
 /**
  * @brief Perform an all-in-one health check on the device.
@@ -332,8 +308,7 @@ AriesErrorType ariesCheckConnectionHealth(
  * @param[in]  device    Pointer to Aries Device struct object
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesCheckDeviceHealth(
-        AriesDeviceType* device);
+AriesErrorType ariesCheckDeviceHealth(AriesDeviceType* device);
 
 /**
  * @brief Perform an all-in-one health check on a given Link.
@@ -345,8 +320,7 @@ AriesErrorType ariesCheckDeviceHealth(
  * @param[in]  link    Pointer to Aries Link struct object
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesCheckLinkHealth(
-        AriesLinkType* link);
+AriesErrorType ariesCheckLinkHealth(AriesLinkType* link);
 
 /**
  * @brief Get link recovery counter value
@@ -356,9 +330,8 @@ AriesErrorType ariesCheckLinkHealth(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesGetLinkRecoveryCount(
-        AriesLinkType* link,
-        int* recoveryCount);
+AriesErrorType ariesGetLinkRecoveryCount(AriesLinkType* link,
+                                         int* recoveryCount);
 
 /**
  * @brief Clear link recovery counter value
@@ -367,8 +340,7 @@ AriesErrorType ariesGetLinkRecoveryCount(
  * @return     AriesErrorType - Aries error code
  *
  */
-AriesErrorType ariesClearLinkRecoveryCount(
-        AriesLinkType* link);
+AriesErrorType ariesClearLinkRecoveryCount(AriesLinkType* link);
 
 /**
  * @brief Get the max recorded junction temperature.
@@ -381,8 +353,7 @@ AriesErrorType ariesClearLinkRecoveryCount(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetMaxTemp(
-        AriesDeviceType* device);
+AriesErrorType ariesGetMaxTemp(AriesDeviceType* device);
 
 /**
  * @brief Get the current junction temperature.
@@ -393,8 +364,7 @@ AriesErrorType ariesGetMaxTemp(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetCurrentTemp(
-        AriesDeviceType* device);
+AriesErrorType ariesGetCurrentTemp(AriesDeviceType* device);
 
 /**
  * @brief Get the current detailed Link state, including electrical parameters.
@@ -405,8 +375,7 @@ AriesErrorType ariesGetCurrentTemp(
  * @param[in,out]  link   Pointer to Aries Link struct object
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetLinkState(
-        AriesLinkType* link);
+AriesErrorType ariesGetLinkState(AriesLinkType* link);
 
 /**
  * @brief Get the current detailed Link state, including electrical parameters.
@@ -417,8 +386,7 @@ AriesErrorType ariesGetLinkState(
  * @param[in,out]  link   Pointer to Aries Link struct object
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetLinkStateDetailed(
-        AriesLinkType* link);
+AriesErrorType ariesGetLinkStateDetailed(AriesLinkType* link);
 
 /**
  * @brief Initialize LTSSM logger.
@@ -432,10 +400,8 @@ AriesErrorType ariesGetLinkStateDetailed(
  * @param[in]  verbosity     Logger verbosity control
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesLTSSMLoggerInit(
-        AriesLinkType* link,
-        uint8_t oneBatchMode,
-        AriesLTSSMVerbosityType verbosity);
+AriesErrorType ariesLTSSMLoggerInit(AriesLinkType* link, uint8_t oneBatchMode,
+                                    AriesLTSSMVerbosityType verbosity);
 
 /**
  * @brief Enable or disable LTSSM logger.
@@ -444,9 +410,7 @@ AriesErrorType ariesLTSSMLoggerInit(
  * @param[in]  printEn  Enable (1) or disable (0) printing for this Link
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesLTSSMLoggerPrintEn(
-        AriesLinkType* link,
-        uint8_t printEn);
+AriesErrorType ariesLTSSMLoggerPrintEn(AriesLinkType* link, uint8_t printEn);
 
 /**
  * @brief Read an entry from the LTSSM logger.
@@ -463,11 +427,10 @@ AriesErrorType ariesLTSSMLoggerPrintEn(
  *                         by this function
  * @return         AriesErrorType - Aries error code
  */
-AriesErrorType ariesLTSSMLoggerReadEntry(
-        AriesLinkType* link,
-        AriesLTSSMLoggerEnumType log,
-        int* offset,
-        AriesLTSSMEntryType* entry);
+AriesErrorType ariesLTSSMLoggerReadEntry(AriesLinkType* link,
+                                         AriesLTSSMLoggerEnumType log,
+                                         int* offset,
+                                         AriesLTSSMEntryType* entry);
 
 /**
  * @brief Set max data rate
@@ -476,9 +439,8 @@ AriesErrorType ariesLTSSMLoggerReadEntry(
  * @param[in]  rate  Max data rate to set
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetMaxDataRate(
-        AriesDeviceType* device,
-        AriesMaxDataRateType rate);
+AriesErrorType ariesSetMaxDataRate(AriesDeviceType* device,
+                                   AriesMaxDataRateType rate);
 
 /**
  * @brief Set the GPIO value
@@ -488,10 +450,7 @@ AriesErrorType ariesSetMaxDataRate(
  * @param[in]  value  GPIO value (0) or (1)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetGPIO(
-        AriesDeviceType* device,
-        int gpioNum,
-        bool value);
+AriesErrorType ariesSetGPIO(AriesDeviceType* device, int gpioNum, bool value);
 
 /**
  * @brief Get the GPIO value
@@ -501,10 +460,7 @@ AriesErrorType ariesSetGPIO(
  * @param[in, out]  value  Pointer to GPIO value (0) or (1) variable
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetGPIO(
-        AriesDeviceType* device,
-        int gpioNum,
-        bool* value);
+AriesErrorType ariesGetGPIO(AriesDeviceType* device, int gpioNum, bool* value);
 
 /**
  * @brief Toggle the GPIO value
@@ -513,9 +469,7 @@ AriesErrorType ariesGetGPIO(
  * @param[in]  gpioNum  GPIO number [0:3]
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesToggleGPIO(
-        AriesDeviceType* device,
-        int gpioNum);
+AriesErrorType ariesToggleGPIO(AriesDeviceType* device, int gpioNum);
 
 /**
  * @brief Set the GPIO direction
@@ -525,23 +479,20 @@ AriesErrorType ariesToggleGPIO(
  * @param[in]  value  GPIO direction (0 = output) or (1 = input)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesSetGPIODirection(
-        AriesDeviceType* device,
-        int gpioNum,
-        bool value);
+AriesErrorType ariesSetGPIODirection(AriesDeviceType* device, int gpioNum,
+                                     bool value);
 
 /**
  * @brief Get the GPIO direction
  *
  * @param[in]  device  Struct containing device information
  * @param[in]  gpioNum  GPIO number [0:3]
- * @param[in, out]  value  Pointer to GPIO direction (0 = output) or (1 = input) variable
+ * @param[in, out]  value  Pointer to GPIO direction (0 = output) or (1 = input)
+ * variable
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesGetGPIODirection(
-        AriesDeviceType* device,
-        int gpioNum,
-        bool* value);
+AriesErrorType ariesGetGPIODirection(AriesDeviceType* device, int gpioNum,
+                                     bool* value);
 
 /**
  * @brief Enable Aries Test Mode for PRBS generation and checking
@@ -549,8 +500,7 @@ AriesErrorType ariesGetGPIODirection(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeEnable(
-        AriesDeviceType* device);
+AriesErrorType ariesTestModeEnable(AriesDeviceType* device);
 
 /**
  * @brief Disable Aries Test Mode for PRBS generation and checking
@@ -558,8 +508,7 @@ AriesErrorType ariesTestModeEnable(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeDisable(
-        AriesDeviceType* device);
+AriesErrorType ariesTestModeDisable(AriesDeviceType* device);
 
 /**
  * @brief Set the desired Aries Test Mode data rate
@@ -568,9 +517,8 @@ AriesErrorType ariesTestModeDisable(
  * @param[in]  rate  Desired rate (1, 2, ... 5)
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRateChange(
-        AriesDeviceType* device,
-        AriesMaxDataRateType rate);
+AriesErrorType ariesTestModeRateChange(AriesDeviceType* device,
+                                       AriesMaxDataRateType rate);
 
 /**
  * @brief Aries Test Mode transmitter configuration
@@ -581,11 +529,9 @@ AriesErrorType ariesTestModeRateChange(
  * @param[in]  enable  Enable (1) or disable (0) flag
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeTxConfig(
-        AriesDeviceType* device,
-        AriesPRBSPatternType pattern,
-        int preset,
-        bool enable);
+AriesErrorType ariesTestModeTxConfig(AriesDeviceType* device,
+                                     AriesPRBSPatternType pattern, int preset,
+                                     bool enable);
 
 /**
  * @brief Aries Test Mode receiver configuration
@@ -595,21 +541,18 @@ AriesErrorType ariesTestModeTxConfig(
  * @param[in]  enable  Enable (1) or disable (0) flag
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRxConfig(
-        AriesDeviceType* device,
-        AriesPRBSPatternType pattern,
-        bool enable);
+AriesErrorType ariesTestModeRxConfig(AriesDeviceType* device,
+                                     AriesPRBSPatternType pattern, bool enable);
 
 /**
  * @brief Aries Test Mode read error count
  *
  * @param[in]  device  Struct containing device information
- * @param[in, out]  ecount  Array containing error count data for each side and lane
+ * @param[in, out]  ecount  Array containing error count data for each side and
+ * lane
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRxEcountRead(
-        AriesDeviceType* device,
-        int* ecount);
+AriesErrorType ariesTestModeRxEcountRead(AriesDeviceType* device, int* ecount);
 
 /**
  * @brief Aries Test Mode clear error count
@@ -619,8 +562,7 @@ AriesErrorType ariesTestModeRxEcountRead(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRxEcountClear(
-        AriesDeviceType* device);
+AriesErrorType ariesTestModeRxEcountClear(AriesDeviceType* device);
 
 /**
  * @brief Aries Test Mode read FoM
@@ -631,9 +573,7 @@ AriesErrorType ariesTestModeRxEcountClear(
  * @param[in, out]  fom  Array containing FoM data for each side and lane
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRxFomRead(
-        AriesDeviceType* device,
-        int* fom);
+AriesErrorType ariesTestModeRxFomRead(AriesDeviceType* device, int* fom);
 
 /**
  * @brief Aries Test Mode read Rx valid
@@ -641,8 +581,7 @@ AriesErrorType ariesTestModeRxFomRead(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeRxValidRead(
-        AriesDeviceType* device);
+AriesErrorType ariesTestModeRxValidRead(AriesDeviceType* device);
 
 /**
  * @brief Aries Test Mode inject error
@@ -650,9 +589,7 @@ AriesErrorType ariesTestModeRxValidRead(
  * @param[in]  device  Struct containing device information
  * @return     AriesErrorType - Aries error code
  */
-AriesErrorType ariesTestModeTxErrorInject(
-        AriesDeviceType* device);
-
+AriesErrorType ariesTestModeTxErrorInject(AriesDeviceType* device);
 
 #ifdef __cplusplus
 }

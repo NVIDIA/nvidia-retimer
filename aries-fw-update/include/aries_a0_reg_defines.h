@@ -28,26 +28,26 @@
 /** Main Micro reg offset for EEPROM assist (data)*/
 #define ARIES_MM_EEPROM_ASSIST_DATA_ADDR 0x410
 /** Main Micro reg offset for EEPROM assist (cmd)*/
-#define ARIES_MM_EEPROM_ASSIST_CMD_ADDR  0x920
+#define ARIES_MM_EEPROM_ASSIST_CMD_ADDR 0x920
 
 /** EEPROM ic cmd reg offset*/
 #define ARIES_I2C_MST_IC_CMD_ADDR 0xd04
 /** EEPROM data0 reg offset*/
-#define ARIES_I2C_MST_DATA0_ADDR  0xd05
+#define ARIES_I2C_MST_DATA0_ADDR 0xd05
 /** EEPROM data1 reg offset*/
-#define ARIES_I2C_MST_DATA1_ADDR  0xd06
+#define ARIES_I2C_MST_DATA1_ADDR 0xd06
 /** EEPROM data2 reg offset*/
-#define ARIES_I2C_MST_DATA2_ADDR  0xd07
+#define ARIES_I2C_MST_DATA2_ADDR 0xd07
 /** EEPROM data3 reg offset*/
-#define ARIES_I2C_MST_DATA3_ADDR  0xd08
+#define ARIES_I2C_MST_DATA3_ADDR 0xd08
 /** EEPROM cmd reg offset*/
-#define ARIES_I2C_MST_CMD_ADDR    0xd09
+#define ARIES_I2C_MST_CMD_ADDR 0xd09
 
 /** HW reset reg */
-#define ARIES_HW_RST_ADDR  0x600
+#define ARIES_HW_RST_ADDR 0x600
 
 /** Main Micro Heartbeat reg */
-#define ARIES_MM_HEARTBEAT_ADDR  0x923
+#define ARIES_MM_HEARTBEAT_ADDR 0x923
 
 /** Enable/Disable thermal shutdown */
 #define ARIES_EN_THERMAL_SHUTDOWN 0x420
@@ -66,10 +66,10 @@
 ///////////////////////////////////////////////////////////////
 
 /** AL Main SRAM DMEM offset (A0) */
-#define AL_MAIN_SRAM_DMEM_OFFSET (64*1024)
+#define AL_MAIN_SRAM_DMEM_OFFSET (64 * 1024)
 
 /** AL Path SRAM DMEM offset (A0) */
-#define AL_PATH_SRAM_DMEM_OFFSET (45*1024)
+#define AL_PATH_SRAM_DMEM_OFFSET (45 * 1024)
 
 /** SRAM read command */
 #define AL_TG_RD_LOC_IND_SRAM 0x16
@@ -77,16 +77,15 @@
 /** SRAM write command */
 #define AL_TG_WR_LOC_IND_SRAM 0x17
 
-
 ///////////////////////////////////////////////////////////
 ////////////////////////// Micros /////////////////////////
 ///////////////////////////////////////////////////////////
 
 /** Offset for main micro FW info */
-#define ARIES_MAIN_MICRO_FW_INFO (96*1024 - 128)
+#define ARIES_MAIN_MICRO_FW_INFO (96 * 1024 - 128)
 
 /** Offset for path micro FW info */
-#define ARIES_PATH_MICRO_FW_INFO_ADDRESS (48*1024 - 256)
+#define ARIES_PATH_MICRO_FW_INFO_ADDRESS (48 * 1024 - 256)
 
 /** Link struct offset in Main Micro */
 #define ARIES_LINK_0_MM_BASE_ADDR 0x10669
@@ -212,28 +211,27 @@
 /** Offset seperating 2 links in Aries Link struct */
 #define ARIES_LINK_STRUCT_LINK_SEP_OFFSET 126
 
-
 ///////////////////////////////////////////////////////////
 ////////////////////// PMA registers //////////////////////
 ///////////////////////////////////////////////////////////
 
 /** PMA Slice 0 Cmd register address*/
-#define ARIES_PMA_QS0_CMD_ADDRESS     0x4400
+#define ARIES_PMA_QS0_CMD_ADDRESS 0x4400
 
 /** PMA Slice 0 Address_1 register address*/
-#define ARIES_PMA_QS0_ADDR_1_ADDRESS  0x4401
+#define ARIES_PMA_QS0_ADDR_1_ADDRESS 0x4401
 
 /** PMA Slice 0 Address_0 register address*/
-#define ARIES_PMA_QS0_ADDR_0_ADDRESS  0x4402
+#define ARIES_PMA_QS0_ADDR_0_ADDRESS 0x4402
 
 /** PMA Slice 0 Data_0 register address*/
-#define ARIES_PMA_QS0_DATA_0_ADDRESS  0x4403
+#define ARIES_PMA_QS0_DATA_0_ADDRESS 0x4403
 
 /** PMA Slice 0 Data_1 register address*/
-#define ARIES_PMA_QS0_DATA_1_ADDRESS  0x4404
+#define ARIES_PMA_QS0_DATA_1_ADDRESS 0x4404
 
 /** PMA offset for SUP_DIG_MPLLB_OVRD_IN_0*/
-#define ARIES_PMA_SUP_DIG_MPLLB_OVRD_IN_0  0x13
+#define ARIES_PMA_SUP_DIG_MPLLB_OVRD_IN_0 0x13
 
 /** Reg offset for PMA reg LANE_DIG_ASIC_RX_OVRD_IN_0 */
 #define ARIES_PMA_LANE_DIG_ASIC_TX_OVRD_IN_0 0x1001
