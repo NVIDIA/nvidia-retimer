@@ -21,18 +21,18 @@
 #ifndef ASTERA_ARIES_SDK_MISC_H_
 #define ASTERA_ARIES_SDK_MISC_H_
 
-#include "aries_api_types.h"
-#include "aries_error.h"
 #include "aries_globals.h"
+#include "aries_error.h"
 #include "aries_i2c.h"
+#include "aries_api_types.h"
 
-#include <ctype.h>
-#include <math.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
+#include <stdint.h>
+#include <ctype.h>
+#include <math.h>
 
 #ifdef __cplusplus
 extern "C"
