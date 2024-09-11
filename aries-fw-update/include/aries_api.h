@@ -21,12 +21,12 @@
 #ifndef ASTERA_ARIES_SDK_API_H_
 #define ASTERA_ARIES_SDK_API_H_
 
-#include "aries_api_types.h"
-#include "aries_bifurcation_params.h"
-#include "aries_error.h"
 #include "aries_globals.h"
+#include "aries_error.h"
 #include "aries_i2c.h"
+#include "aries_api_types.h"
 #include "aries_misc.h"
+#include "aries_bifurcation_params.h"
 
 #ifdef ARIES_MPW
 #include "aries_mpw_reg_defines.h"
@@ -34,11 +34,11 @@
 #include "aries_a0_reg_defines.h"
 #endif
 
-#include <math.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <math.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C"

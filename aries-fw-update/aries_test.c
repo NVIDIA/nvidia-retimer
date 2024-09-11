@@ -22,8 +22,8 @@
  *        - Getting the FW version
  */
 
-#include "aspeed.h"
 #include "include/aries_api.h"
+#include "aspeed.h"
 
 #include <unistd.h>
 
