@@ -41,7 +41,6 @@ add_project_arguments('-Wno-incompatible-pointer-types', language : 'c')
 subdir('concurrent-update')
 subdir('inventory')
 subdir('services')
-subdir('aries-fw-update')
 if get_option('retimer_app_support')
   subdir('nvidia-retimer-app')
 endif
