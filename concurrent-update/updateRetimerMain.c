@@ -32,6 +32,7 @@
 #include <time.h>
 #include <unistd.h> // for lseek()
 #include <fcntl.h>
+#include <inttypes.h> // for PRI* macros
 #include "updateRetimerFwOverI2C.h"
 
 extern uint8_t verbosity;
@@ -90,6 +91,8 @@ int main(int argc, char *argv[])
 	update_operation *update_ops = NULL;
 	int update_ops_count = -1;
 	int updateFirstErrRet = 0;
+	uint8_t retimerWpBitmap = 0;
+	int retimerGetWpRet = 0;
 
 	// set stdout to line-buffered so it interleaves correctly with stderr
 	setvbuf(stdout, NULL, _IOLBF, 0);
@@ -253,8 +256,42 @@ int main(int argc, char *argv[])
 				NULL, 0);
 		}
 
+		retimerGetWpRet = checkRetimerWpAsserted(&retimerWpBitmap,
+							 retimerToUpdate);
+		if (retimerGetWpRet) {
+			fprintf(stderr, "checkRetimerWpAsserted returned %d\n",
+				retimerGetWpRet);
+			ret = retimerGetWpRet;
+			goto exit;
+		}
+		fprintf(stderr, "retimers under WP: %#" PRIx8 "\n",
+			retimerWpBitmap);
+
 		for (int uo = 0; uo < update_ops_count; uo++) {
 			fprintf(stderr, "performing update_ops[%d]\n", uo);
+			// Also intersect with WP status and log TransferFailed
+			if (retimerWpBitmap & update_ops[uo].applyBitmap) {
+				prepareMessageRegistry(
+					retimerWpBitmap &
+						update_ops[uo].applyBitmap,
+					"TransferFailed",
+					update_ops[uo].versionString,
+					MSG_REG_VER_FOLLOWED_BY_DEV,
+					"xyz.openbmc_project.Logging.Entry.Level.Critical",
+					NULL, 0);
+				// continue the update but skip retimers under WP
+				fprintf(stderr,
+					"some retimers under WP, change applyBitmap "
+					"from %#x to %#x\n",
+					update_ops[uo].applyBitmap,
+					update_ops[uo].applyBitmap &
+						~retimerWpBitmap);
+				update_ops[uo].applyBitmap &= ~retimerWpBitmap;
+				if (!updateFirstErrRet) {
+					updateFirstErrRet =
+						-ERROR_UPG_WP_ASSERTED_BEFORE_UPDATE;
+				}
+			}
 			if (!update_ops[uo].applyBitmap) {
 				fprintf(stdout,
 					"applyBitmap for update_ops[%d] is 0, skipping\n",
@@ -285,7 +322,9 @@ int main(int argc, char *argv[])
 					MSG_REG_VER_FOLLOWED_BY_DEV,
 					"xyz.openbmc_project.Logging.Entry.Level.Critical",
 					NULL, 0);
-				updateFirstErrRet = ret;
+				if (!updateFirstErrRet) {
+					updateFirstErrRet = ret;
+				}
 				continue;
 			}
 
