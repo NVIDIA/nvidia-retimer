@@ -57,8 +57,6 @@ ErrorCodeMapTable table[] = {
 	{ 0x15, "ERR_PCIE_TIMEOUT_STOPPED_RT_EEPROM_UPDATE " }
 };
 
-volatile extendedErrorCode *dumpExtendedI2CReg = NULL;
-
 const uint8_t CompositeImageHeaderUuid[16] = { 0x8c, 0x28, 0xd7, 0x7a,
 					       0x97, 0x07, 0x43, 0xd7,
 					       0xbc, 0x13, 0xc1, 0x2b,
@@ -393,6 +391,17 @@ char *parseExI2CErrorCode(uint8_t errorCode)
 
 int checkExtenedErrorReg()
 {
+	extendedErrorCode dumpExtendedI2CReg;
+	int ret = readExtendedErrorReg(&dumpExtendedI2CReg);
+	if (ret) {
+		return ret;
+	}
+	reportErrFromExtendedErrorReg(&dumpExtendedI2CReg);
+	return 0;
+}
+
+int readExtendedErrorReg(extendedErrorCode *dumpExtendedI2CReg)
+{
 	uint8_t write_buffer[2];
 	uint8_t read_buffer[EXTENDED_ERR_MAX_PAGE_SZ];
 	char i2c_device[MAX_NAME_SIZE] = { 0 };
@@ -428,10 +437,19 @@ int checkExtenedErrorReg()
 		return -1;
 	}
 
-	dumpExtendedI2CReg =
-		(extendedErrorCode
-			 *)&read_buffer[FPGA_SEC_REGTBL_FWCONTROLLER_OFFSET];
+	*dumpExtendedI2CReg =
+		*(extendedErrorCode
+			  *)&read_buffer[FPGA_SEC_REGTBL_FWCONTROLLER_OFFSET];
 
+	if (exfd != -1) {
+		close(exfd);
+	}
+
+	return 0;
+}
+
+void reportErrFromExtendedErrorReg(const extendedErrorCode *dumpExtendedI2CReg)
+{
 	// parse extended i2c error register dump as per extendedErrorCode
 	for (int index = 0; index < RETIMER_MAX_NUM; index++) {
 		if ((dumpExtendedI2CReg->AddrErrorCode[index]
@@ -490,10 +508,53 @@ int checkExtenedErrorReg()
 			"xyz.openbmc_project.Logging.Entry.Level.Critical",
 			"Reach out to the nNvidia support team for further action");
 	}
+}
+
+int readRetimerIndividualWp(uint8_t *individualWp)
+{
+	uint8_t write_buffer[2];
+	uint8_t read_buffer[FPGA_REGTBL_MAX_PAGE_SZ];
+	char i2c_device[MAX_NAME_SIZE] = { 0 };
+	int exfd = -1;
+	uint8_t slaveID = FPGA_PRIMARY_REGTBL;
+	uint8_t bus =
+		HMC_I2CBUS_FPGA_PRI_REGTBL; //On HMC, FPGA_PRIMARY_REGTBL is enumerated on bus 2
+	int ret = -1;
+
+	sprintf(i2c_device, "/dev/i2c-%d", bus);
+
+	exfd = open(i2c_device, O_RDWR | O_NONBLOCK);
+
+	if (exfd < 0) {
+		fprintf(stderr,
+			"readRetimerIndividualWp Error opening i2c file: %s\n",
+			strerror(errno));
+		return ERROR_OPEN_I2C_DEVICE;
+	}
+
+	memset(write_buffer, 0x00, sizeof(write_buffer));
+	memset(read_buffer, 0x00, sizeof(read_buffer));
+
+	write_buffer[0] = 0x0;
+	write_buffer[1] = 0x0; // Read from offset 0x0
+
+	ret = send_i2c_cmd(exfd, FPGA_READ, slaveID, write_buffer, read_buffer,
+			   2, FPGA_REGTBL_MAX_PAGE_SZ);
+	if (ret) {
+		fprintf(stderr,
+			"readRetimerIndividualWp FPGA_WRITE failed write_buffer: 0x%x 0x%x \n",
+			write_buffer[0], write_buffer[1]);
+		close(exfd);
+		return -1;
+	}
+
+	*individualWp =
+		*(uint8_t *)&read_buffer[FPGA_PRI_REGTBL_RETIMER_WP_OFFSET];
 
 	if (exfd != -1) {
 		close(exfd);
 	}
+
 	return 0;
 }
 
@@ -1337,6 +1398,61 @@ int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer)
 	ret = (ret | (*retimer & 0xFF));
 
 	return ret;
+}
+
+int checkRetimerWpAsserted(uint8_t *writeProtectedRetimers,
+			   uint8_t retimerToUpdate)
+{
+	uint8_t computedWp = 0;
+	// Check global and per-retimer WP, for retimers with WP asserted log a
+	// TransferFailed message and skip updating them.
+	extendedErrorCode dumpExtendedI2CReg;
+	uint8_t individualRetimerWp = 0;
+	char arg[MAX_NAME_SIZE] = { 0 };
+	int ret = readExtendedErrorReg(&dumpExtendedI2CReg);
+	if (ret) {
+		fprintf(stderr,
+			"checkRetimerWpAsserted: read global WP ret %d\n", ret);
+		return ret;
+	}
+
+	//check if globalWp is active,globalWp is active low signal
+	if ((dumpExtendedI2CReg.globalWp & GLOBAL_WP_L_MASK) == 0x00) {
+		computedWp |= 0xFF;
+		if (retimerToUpdate) {
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected",
+				"HGX_FW_PCIeRetimer update service",
+				"Global Write Protect Enabled",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Disable write protect on the device and retry the firmware "
+				"update operation.");
+		}
+	}
+
+	ret = readRetimerIndividualWp(&individualRetimerWp);
+	if (ret) {
+		fprintf(stderr,
+			"checkRetimerWpAsserted: readRetimerIndividualWp ret %d\n",
+			ret);
+		return ret;
+	}
+
+	// log individual WP messages
+	for (int i = 0; i < RETIMER_MAX_NUM; i++) {
+		if (retimerToUpdate & individualRetimerWp & (1 << i)) {
+			sprintf(arg, "HGX_FW_PCIeRetimer_%d", i);
+			genericMessageRegistry(
+				"ResourceEvent.1.0.ResourceErrorsDetected", arg,
+				"Retimer Write Protect Enabled",
+				"xyz.openbmc_project.Logging.Entry.Level.Critical",
+				"Disable write protect on the device and retry the firmware "
+				"update operation.");
+		}
+	}
+	computedWp |= individualRetimerWp;
+	*writeProtectedRetimers = computedWp;
+	return 0;
 }
 
 /********************************************************************

@@ -81,6 +81,12 @@
 #define CPLD_SLAVE_ID 0x3c
 #define CPLD_GB_OFFSET 0x2b
 
+// FPGA Primary RegTBL slave address for per-retimer WP
+#define FPGA_PRIMARY_REGTBL 0x31
+#define FPGA_PRI_REGTBL_RETIMER_WP_OFFSET 0x45
+#define HMC_I2CBUS_FPGA_PRI_REGTBL 0x2
+#define FPGA_REGTBL_MAX_PAGE_SZ 256
+
 // FPGA Secondary RegTBL slave address for extended error reporting
 #define FPGA_SECONDARY_REGTBL 0x31
 #define FPGA_SEC_REGTBL_FWCONTROLLER_OFFSET 0x4B
@@ -129,6 +135,7 @@ enum {
 	ERROR_UPG_NACK_RETIMER6 = 0x206,
 	ERROR_UPG_NACK_RETIMER7 = 0x207,
 	ERROR_UPG_NACK_RETIMER_ALL = 0x208,
+	ERROR_UPG_WP_ASSERTED_BEFORE_UPDATE = 0x209,
 	// FW READ ERROR
 	ERROR_READ_NACK = 0x300,
 	ERROR_READ_NACK_RETIMER0 = 0x300,
@@ -260,6 +267,9 @@ int send_i2c_cmd(int fd, int isRead, unsigned char slaveId,
 		 unsigned char *write_data, unsigned char *read_data,
 		 unsigned int write_count, unsigned int read_count);
 int checkExtenedErrorReg();
+int readExtendedErrorReg(extendedErrorCode *dumpExtendedI2CReg);
+void reportErrFromExtendedErrorReg(const extendedErrorCode *dumpExtendedI2CReg);
+int readRetimerIndividualWp(uint8_t *individualWp);
 void genericMessageRegistry(char *message, char *arg0, char *arg1,
 			    char *severity, char *resolution);
 int maperrnoToI2CError(int errnoval, unsigned char slaveId, char **msg,
@@ -278,6 +288,8 @@ int copyImageFromFpga(int fw_fd, int fd, unsigned int slaveId);
 int checkReadNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkWriteNackError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
 int checkChecksumError(uint8_t status, const uint8_t mask[], uint8_t *retimer);
+int checkRetimerWpAsserted(uint8_t *writeProtectedRetimers,
+			   uint8_t retimerToUpdate);
 int startRetimerFwUpdate(int fd, uint8_t retimerNumber, char *versionStr,
 			 uint8_t *retimerNotUpdated);
 int readRetimerfw(int fd, uint8_t retimerNumber);
